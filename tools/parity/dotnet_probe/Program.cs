@@ -10,7 +10,6 @@
 using System.Globalization;
 using System.Text;
 using Unicode.Bidi;
-using Unicode.Bidi.char_data;
 
 if (args.Length < 1)
 {

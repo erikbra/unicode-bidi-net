@@ -13,8 +13,6 @@
  * Licensed under the Apache License, Version 2.0 or the MIT license, at your option.
  */
 
-using Unicode.Bidi.char_data;
-
 namespace Unicode.Bidi;
 
 /// <summary>
@@ -79,6 +77,16 @@ public readonly record struct Level : IComparable<Level>
     }
 
     /// <summary>
+    /// Creates an embedding level, accepting values through the implicit maximum.
+    /// </summary>
+    /// <param name="number">The numeric embedding level.</param>
+    /// <exception cref="LevelOutOfRangeException">Thrown when <paramref name="number"/> is above <see cref="MaxImplicitDepth"/>.</exception>
+    public static Level Create(byte number)
+    {
+        return New(number);
+    }
+
+    /// <summary>
     /// Creates an explicit embedding level, accepting values through the explicit maximum.
     /// </summary>
     /// <param name="number">The numeric embedding level.</param>
@@ -89,6 +97,21 @@ public readonly record struct Level : IComparable<Level>
             ? new Level(number)
             : throw new LevelOutOfRangeException(number, MaxExplicitDepth);
     }
+
+    /// <summary>
+    /// Creates an explicit embedding level, accepting values through the explicit maximum.
+    /// </summary>
+    /// <param name="number">The numeric embedding level.</param>
+    /// <exception cref="LevelOutOfRangeException">Thrown when <paramref name="number"/> is above <see cref="MaxExplicitDepth"/>.</exception>
+    public static Level CreateExplicit(byte number)
+    {
+        return NewExplicit(number);
+    }
+
+    /// <summary>
+    /// Gets the numeric embedding level.
+    /// </summary>
+    public byte Value => _value;
 
     /// <summary>
     /// Returns the numeric embedding level.
@@ -107,12 +130,22 @@ public readonly record struct Level : IComparable<Level>
     }
 
     /// <summary>
+    /// Gets whether this level has left-to-right direction.
+    /// </summary>
+    public bool IsLeftToRight => IsLtr();
+
+    /// <summary>
     /// Returns whether this level has right-to-left direction.
     /// </summary>
     public bool IsRtl()
     {
         return _value % 2 == 1;
     }
+
+    /// <summary>
+    /// Gets whether this level has right-to-left direction.
+    /// </summary>
+    public bool IsRightToLeft => IsRtl();
 
     /// <summary>
     /// Raises this level by the specified amount.
@@ -182,7 +215,7 @@ public readonly record struct Level : IComparable<Level>
     /// </summary>
     public BidiClass BidiClass()
     {
-        return IsRtl() ? char_data.BidiClass.R : char_data.BidiClass.L;
+        return IsRtl() ? global::Unicode.Bidi.BidiClass.R : global::Unicode.Bidi.BidiClass.L;
     }
 
     /// <inheritdoc />

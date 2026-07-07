@@ -7,8 +7,6 @@
  * PORT_MODE: test-adapted
  */
 
-using Unicode.Bidi.char_data;
-
 namespace Unicode.Bidi.Tests;
 
 public class levelTests
@@ -17,6 +15,7 @@ public class levelTests
     public void TestNew()
     {
         Assert.Equal((byte)0, Level.New(0).Number());
+        Assert.Equal((byte)0, Level.Create(0).Value);
         Assert.Equal((byte)1, Level.New(1).Number());
         Assert.Equal((byte)10, Level.New(10).Number());
         Assert.Equal((byte)125, Level.New(125).Number());
@@ -29,6 +28,7 @@ public class levelTests
     public void TestNewExplicit()
     {
         Assert.Equal((byte)0, Level.NewExplicit(0).Number());
+        Assert.Equal((byte)0, Level.CreateExplicit(0).Value);
         Assert.Equal((byte)1, Level.NewExplicit(1).Number());
         Assert.Equal((byte)10, Level.NewExplicit(10).Number());
         Assert.Equal((byte)125, Level.NewExplicit(125).Number());
@@ -46,6 +46,7 @@ public class levelTests
     public void TestIsLtr(byte number, bool expected)
     {
         Assert.Equal(expected, Level.New(number).IsLtr());
+        Assert.Equal(expected, Level.New(number).IsLeftToRight);
     }
 
     [Theory]
@@ -58,6 +59,7 @@ public class levelTests
     public void TestIsRtl(byte number, bool expected)
     {
         Assert.Equal(expected, Level.New(number).IsRtl());
+        Assert.Equal(expected, Level.New(number).IsRightToLeft);
     }
 
     [Fact]

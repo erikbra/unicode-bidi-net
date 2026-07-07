@@ -14,8 +14,9 @@
  */
 
 using System.Text;
+using Unicode.Bidi.char_data;
 
-namespace Unicode.Bidi.char_data;
+namespace Unicode.Bidi;
 
 /// <summary>
 /// Accessor for the Unicode Bidi_Class property from Unicode Character Database data.
@@ -74,7 +75,7 @@ public static class CharData
         }
 
         // UCD/extracted/DerivedBidiClass.txt: all unlisted code points default to L.
-        return global::Unicode.Bidi.char_data.BidiClass.L;
+        return global::Unicode.Bidi.BidiClass.L;
     }
 
     /// <summary>
@@ -83,9 +84,9 @@ public static class CharData
     /// <param name="bidiClass">The bidi class to inspect.</param>
     public static bool IsRtl(BidiClass bidiClass)
     {
-        return bidiClass is global::Unicode.Bidi.char_data.BidiClass.RLE
-            or global::Unicode.Bidi.char_data.BidiClass.RLO
-            or global::Unicode.Bidi.char_data.BidiClass.RLI;
+        return bidiClass is global::Unicode.Bidi.BidiClass.RLE
+            or global::Unicode.Bidi.BidiClass.RLO
+            or global::Unicode.Bidi.BidiClass.RLI;
     }
 
     internal static BidiMatchedOpeningBracket? BidiMatchedOpeningBracket(Rune rune)

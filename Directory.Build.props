@@ -9,8 +9,9 @@
     <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">0.3.18.0</AssemblyVersion>
     <FileVersion Condition="'$(FileVersion)' == ''">0.3.18.0</FileVersion>
 
-    <Authors>unicode-bidi contributors; Unicode.Bidi contributors</Authors>
-    <Company>Unicode.Bidi contributors</Company>
+    <Authors>Erik A. Brandstadmoen; unicode-bidi contributors; Unicode.Bidi contributors</Authors>
+    <Company>Erik A. Brandstadmoen</Company>
+    <Copyright>Copyright (c) 2006 Erik A. Brandstadmoen</Copyright>
     <PackageProjectUrl>https://github.com/erikbra/unicode-bidi-net</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
