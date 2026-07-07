@@ -88,6 +88,9 @@ project.fragment.lock.json
 artifacts/
 .artifacts/
 
+# Rust probe build output
+**/target/
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
