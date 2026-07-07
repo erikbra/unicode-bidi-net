@@ -40,11 +40,14 @@ python3 tools/conformance/run_unicode_bidi_conformance.py \
 The runner emits:
 
 - `results.json`
+- `results.rows.jsonl`
+- `failures.jsonl`
 - `summary.md`
 
 ## GitHub Actions
 
 The regular CI workflow compiles the conformance scripts but keeps PRs on the curated parity suite.
-The manual **Unicode Conformance** workflow downloads Unicode data and runs either a bounded sample or the full selected corpus.
+The **Unicode Conformance** workflow downloads Unicode data and runs either a bounded sample or the full selected corpus.
+It can be started manually, and it also runs the full `both` corpus weekly on the default branch.
 
-[#13](https://github.com/erikbra/unicode-bidi-net/issues/13) tracks promoting the full corpus to a scheduled/provisioned ratchet gate.
+The scheduled full `both` run uses `tools/conformance/full-ratchet-baseline.json`, which currently requires all 861,948 Unicode 16.0.0 cases and zero failures.

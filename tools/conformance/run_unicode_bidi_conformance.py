@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from itertools import chain, islice
 from pathlib import Path
 
 
@@ -17,6 +18,11 @@ DEFAULT_DATA_DIR = ROOT / f"artifacts/unicode-{UNICODE_VERSION}"
 DOTNET_PROBE = ROOT / "tools/parity/dotnet_probe/UnicodeBidiDotnetProbe.csproj"
 DOTNET_PROBE_ASSEMBLY = ROOT / "tools/parity/dotnet_probe/bin/Release/net10.0/UnicodeBidiDotnetProbe.dll"
 DEFAULT_BASELINE = ROOT / "tools/conformance/ratchet-baseline.json"
+PROBE_INPUT = "probe-input.tsv"
+PROBE_OUTPUT = "probe-output.txt"
+EXPECTED_ROWS = "expected.rows.jsonl"
+RESULT_ROWS = "results.rows.jsonl"
+FAILURE_ROWS = "failures.jsonl"
 
 CLASS_REPRESENTATIVES = {
     "AL": 0x0627,
@@ -79,44 +85,42 @@ def main() -> int:
         env=env,
     )
 
-    cases = load_bounded_cases(args.data_dir, args.suite, args.max_cases, args.full)
+    reset_output_files(args.out_dir)
+    input_path = args.out_dir / PROBE_INPUT
+    output_path = args.out_dir / PROBE_OUTPUT
+    expected_path = args.out_dir / EXPECTED_ROWS
+    rows_path = args.out_dir / RESULT_ROWS
+    failures_path = args.out_dir / FAILURE_ROWS
 
-    rows = []
-    failures = []
-    for case in cases:
-        actual = run_probe(case, env)
-        expected = {
-            "para": case.expected_para,
-            "levels": case.expected_levels,
-            "reorder": case.expected_reorder,
-        }
-        mismatches = compare_expected(expected, actual)
-        row = {
-            "suite": case.suite,
-            "name": case.name,
-            "defaultLevel": case.default_level,
-            "units": case.units,
-            "expected": expected,
-            "actual": actual,
-            "ok": not mismatches,
-            "mismatches": mismatches,
-        }
-        rows.append(row)
-        if mismatches:
-            failures.append(row)
+    cases = select_cases(args.data_dir, args.suite, args.max_cases, args.full)
+    case_count = prepare_probe_input(cases, input_path, expected_path)
+    print(f"prepared {case_count} conformance cases")
+
+    run_probe_batch(input_path, output_path, env)
+    counts, failures = compare_probe_output(expected_path, output_path, rows_path, failures_path)
 
     summary = {
         "unicodeVersion": UNICODE_VERSION,
         "suite": args.suite,
         "full": args.full,
-        "total": len(rows),
-        "passed": len(rows) - len(failures),
-        "failed": len(failures),
+        "total": counts["total"],
+        "passed": counts["passed"],
+        "failed": counts["failed"],
+        "artifacts": {
+            "results": "results.json",
+            "rows": RESULT_ROWS,
+            "failures": FAILURE_ROWS,
+            "probeInput": PROBE_INPUT,
+            "probeOutput": PROBE_OUTPUT,
+        },
     }
     baseline = read_baseline(args.baseline)
     regression = summary["failed"] > baseline["maxFailures"] or summary["total"] < baseline["minCases"]
 
-    (args.out_dir / "results.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=2) + "\n", encoding="utf-8")
+    (args.out_dir / "results.json").write_text(
+        json.dumps({"summary": summary, "firstFailures": failures}, indent=2) + "\n",
+        encoding="utf-8",
+    )
     (args.out_dir / "summary.md").write_text(render_summary(summary, baseline, regression, failures), encoding="utf-8")
     print(f"bidi conformance: {summary['passed']}/{summary['total']} matched ({summary['failed']} failed)")
 
@@ -150,20 +154,23 @@ def load_cases(data_dir: Path, suite: str):
         yield from load_class_cases(data_dir / "BidiTest.txt")
 
 
-def load_bounded_cases(data_dir: Path, suite: str, max_cases: int, full: bool) -> list[Case]:
-    if full or suite != "both":
-        cases = list(load_cases(data_dir, suite))
-        return cases if full else cases[:max_cases]
+def select_cases(data_dir: Path, suite: str, max_cases: int, full: bool):
+    if full:
+        return load_cases(data_dir, suite)
+
+    if suite != "both":
+        return islice(load_cases(data_dir, suite), max_cases)
 
     character_budget = max_cases // 2
     class_budget = max_cases - character_budget
-    character_cases = list(load_character_cases(data_dir / "BidiCharacterTest.txt"))[:character_budget]
-    class_cases = list(load_class_cases(data_dir / "BidiTest.txt"))[:class_budget]
-    return character_cases + class_cases
+    return chain(
+        islice(load_character_cases(data_dir / "BidiCharacterTest.txt"), character_budget),
+        islice(load_class_cases(data_dir / "BidiTest.txt"), class_budget),
+    )
 
 
 def load_character_cases(path: Path):
-    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for line_number, raw_line in enumerate(path.open(encoding="utf-8"), start=1):
         line = raw_line.split("#", 1)[0].strip()
         if not line:
             continue
@@ -188,7 +195,7 @@ def load_character_cases(path: Path):
 def load_class_cases(path: Path):
     current_levels = ""
     current_reorder = ""
-    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for line_number, raw_line in enumerate(path.open(encoding="utf-8"), start=1):
         line = raw_line.split("#", 1)[0].strip()
         if not line:
             continue
@@ -219,6 +226,126 @@ def load_class_cases(path: Path):
                     expected_levels=current_levels,
                     expected_reorder=current_reorder,
                 )
+
+
+def reset_output_files(out_dir: Path) -> None:
+    for name in (
+        "results.json",
+        "summary.md",
+        PROBE_INPUT,
+        PROBE_OUTPUT,
+        EXPECTED_ROWS,
+        RESULT_ROWS,
+        FAILURE_ROWS,
+    ):
+        path = out_dir / name
+        if path.exists():
+            path.unlink()
+
+
+def prepare_probe_input(cases, input_path: Path, expected_path: Path) -> int:
+    count = 0
+    with input_path.open("w", encoding="utf-8", newline="\n") as probe_input, \
+            expected_path.open("w", encoding="utf-8", newline="\n") as expected_rows:
+        for case in cases:
+            probe_input.write(f"{case.units}\t{case.default_level}\n")
+            expected_rows.write(json.dumps(case_payload(case), separators=(",", ":")) + "\n")
+            count += 1
+    return count
+
+
+def case_payload(case: Case) -> dict[str, object]:
+    return {
+        "suite": case.suite,
+        "name": case.name,
+        "defaultLevel": case.default_level,
+        "units": case.units,
+        "expected": {
+            "para": case.expected_para,
+            "levels": case.expected_levels,
+            "reorder": case.expected_reorder,
+        },
+    }
+
+
+def run_probe_batch(input_path: Path, output_path: Path, env: dict[str, str]) -> None:
+    command = ["dotnet", str(DOTNET_PROBE_ASSEMBLY), "conformance-batch"]
+    with input_path.open("r", encoding="utf-8") as probe_input, \
+            output_path.open("w", encoding="utf-8", newline="\n") as probe_output:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            stdin=probe_input,
+            stdout=probe_output,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+    if completed.returncode != 0:
+        print(completed.stderr, file=sys.stderr)
+        raise SystemExit(completed.returncode)
+
+
+def compare_probe_output(
+    expected_path: Path,
+    output_path: Path,
+    rows_path: Path,
+    failures_path: Path,
+) -> tuple[dict[str, int], list[dict[str, object]]]:
+    total = 0
+    passed = 0
+    failed = 0
+    first_failures = []
+
+    with expected_path.open(encoding="utf-8") as expected_rows, \
+            output_path.open(encoding="utf-8") as actual_rows, \
+            rows_path.open("w", encoding="utf-8", newline="\n") as results_rows, \
+            failures_path.open("w", encoding="utf-8", newline="\n") as failure_rows:
+        for expected_line in expected_rows:
+            total += 1
+            case = json.loads(expected_line)
+            actual_line = actual_rows.readline()
+            if actual_line:
+                actual = parse_probe_output(actual_line.strip())
+                mismatches = compare_expected(case["expected"], actual)
+            else:
+                actual = {}
+                mismatches = ["missing-output"]
+
+            row = {
+                **case,
+                "actual": actual,
+                "ok": not mismatches,
+                "mismatches": mismatches,
+            }
+            results_rows.write(json.dumps(row, separators=(",", ":")) + "\n")
+            if mismatches:
+                failed += 1
+                failure_rows.write(json.dumps(row, separators=(",", ":")) + "\n")
+                if len(first_failures) < 20:
+                    first_failures.append(row)
+            else:
+                passed += 1
+
+        for extra_number, extra_line in enumerate(actual_rows, start=1):
+            total += 1
+            failed += 1
+            row = {
+                "suite": "probe",
+                "name": f"extra-output:{extra_number}",
+                "defaultLevel": "",
+                "units": "",
+                "expected": {},
+                "actual": {"raw": extra_line.strip()},
+                "ok": False,
+                "mismatches": ["extra-output"],
+            }
+            results_rows.write(json.dumps(row, separators=(",", ":")) + "\n")
+            failure_rows.write(json.dumps(row, separators=(",", ":")) + "\n")
+            if len(first_failures) < 20:
+                first_failures.append(row)
+
+    return {"total": total, "passed": passed, "failed": failed}, first_failures
 
 
 def run_probe(case: Case, env: dict[str, str]) -> dict[str, str]:
@@ -276,7 +403,12 @@ def read_baseline(path: Path) -> dict[str, int]:
     }
 
 
-def render_summary(summary: dict[str, object], baseline: dict[str, int], regression: bool, failures: list[dict[str, object]]) -> str:
+def render_summary(
+    summary: dict[str, object],
+    baseline: dict[str, int],
+    regression: bool,
+    failures: list[dict[str, object]],
+) -> str:
     lines = [
         "# Unicode Bidi Conformance",
         "",
@@ -288,6 +420,8 @@ def render_summary(summary: dict[str, object], baseline: dict[str, int], regress
         f"- Baseline min cases: {baseline['minCases']}",
         f"- Baseline max failures: {baseline['maxFailures']}",
         f"- Ratchet regression: {'yes' if regression else 'no'}",
+        f"- Rows artifact: `{summary['artifacts']['rows']}`",
+        f"- Failure artifact: `{summary['artifacts']['failures']}`",
         "",
     ]
     if failures:

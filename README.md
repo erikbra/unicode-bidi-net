@@ -49,7 +49,7 @@ python3 tools/conformance/run_unicode_bidi_conformance.py \
   --fail-on-regression
 ```
 
-Use `--full` for a full local/provisioned run. GitHub Actions also provides a manual **Unicode Conformance** workflow.
+Use `--full` for a full local/provisioned run. GitHub Actions also provides a manual **Unicode Conformance** workflow and a weekly full-corpus ratchet.
 
 ## Packaging
 
