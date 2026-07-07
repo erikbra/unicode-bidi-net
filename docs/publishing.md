@@ -9,11 +9,13 @@ Create a Trusted Publishing policy on nuget.org for this repository:
 - Repository Owner: `erikbra`
 - Repository: `unicode-bidi-net`
 - Workflow File: `publish-nuget.yml`
-- Environment: leave empty, unless you later add a GitHub Actions environment to the workflow
+- Environment: `nuget.org`
 
 The workflow file value is the file name only. Do not enter `.github/workflows/publish-nuget.yml`.
 
 NuGet Trusted Publishing exchanges GitHub's OIDC token for a temporary NuGet API key during the workflow run, so no long-lived `NUGET_API_KEY` secret is required.
+
+The GitHub `nuget.org` environment must define a variable named `NUGET_USER` containing the nuget.org username/profile name, not an email address.
 
 ## Dry Run
 
@@ -25,8 +27,7 @@ Run the workflow from `main` with:
 
 - `package_version`: the version to publish, for example `0.3.18-preview`.
 - `publish_to_nuget`: `true`.
-- `nuget_user`: your nuget.org username/profile name, not your email address.
 - `confirm_package_id`: `Unicode.Bidi`.
 - `run_full_conformance`: keep `true` unless the full conformance workflow has already passed for the same commit.
 
-The workflow refuses to publish from non-`main` refs, refuses to publish without a NuGet user and explicit package-id confirmation, and uses `--skip-duplicate` so a retry does not fail solely because nuget.org already accepted the package.
+The workflow refuses to publish from non-`main` refs, refuses to publish without the explicit package-id confirmation, and uses `--skip-duplicate` so a retry does not fail solely because nuget.org already accepted the package. The final publish job targets the `nuget.org` GitHub environment and reads its `NUGET_USER` variable.
