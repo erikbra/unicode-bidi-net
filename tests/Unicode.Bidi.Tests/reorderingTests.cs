@@ -77,6 +77,16 @@ public class reorderingTests
         Assert.True(bidiInfo.HasRtl());
     }
 
+    [Fact]
+    public void Create_MatchesNew()
+    {
+        BidiInfo bidiInfo = BidiInfo.Create("\u05D0abc", Level.Ltr());
+
+        ParagraphInfo paragraph = Assert.Single(bidiInfo.Paragraphs);
+        Assert.Equal(Level.Ltr(), paragraph.Level);
+        Assert.True(bidiInfo.HasRtl());
+    }
+
     private static void AssertReorderedParagraphs(string text, string[] expected)
     {
         BidiInfo bidiInfo = BidiInfo.New(text);

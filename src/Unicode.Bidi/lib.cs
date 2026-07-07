@@ -18,27 +18,52 @@ using Unicode.Bidi.char_data;
 
 namespace Unicode.Bidi;
 
+/// <summary>
+/// Directionality of resolved bidi levels in a paragraph or line.
+/// </summary>
 public enum Direction
 {
+    /// <summary>All inspected levels are left-to-right.</summary>
     Ltr,
+    /// <summary>All inspected levels are right-to-left.</summary>
     Rtl,
+    /// <summary>The inspected levels contain both left-to-right and right-to-left levels.</summary>
     Mixed,
 }
 
+/// <summary>
+/// A half-open UTF-16 code-unit range.
+/// </summary>
+/// <param name="Start">The inclusive start code-unit index.</param>
+/// <param name="End">The exclusive end code-unit index.</param>
 public readonly record struct TextRange(int Start, int End)
 {
+    /// <summary>
+    /// Gets the number of UTF-16 code units in the range.
+    /// </summary>
     public int Length => End - Start;
 
+    /// <summary>
+    /// Gets whether the range contains no code units.
+    /// </summary>
     public bool IsEmpty => Length == 0;
 }
 
 /// <summary>
 /// Bidi information about a single paragraph.
 /// </summary>
+/// <param name="Range">The paragraph range in UTF-16 code units.</param>
+/// <param name="Level">The paragraph embedding level.</param>
 public sealed record ParagraphInfo(TextRange Range, Level Level)
 {
+    /// <summary>
+    /// Gets the paragraph length in UTF-16 code units.
+    /// </summary>
     public int Length => Range.Length;
 
+    /// <summary>
+    /// Returns the paragraph length, matching the Rust crate API name.
+    /// </summary>
     public int Len()
     {
         return Length;
@@ -57,6 +82,9 @@ public sealed class InitialInfo
         Paragraphs = paragraphs;
     }
 
+    /// <summary>
+    /// Gets the original input text.
+    /// </summary>
     public string Text { get; }
 
     /// <summary>
@@ -70,10 +98,29 @@ public sealed class InitialInfo
     /// </summary>
     public IReadOnlyList<ParagraphInfo> Paragraphs { get; }
 
+    /// <summary>
+    /// Computes initial bidi classes and paragraph boundaries for text.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <param name="defaultParaLevel">The paragraph level to use, or <see langword="null"/> to determine it from text.</param>
+    /// <returns>The initial bidi information.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     public static InitialInfo New(string text, Level? defaultParaLevel = null)
     {
         ArgumentNullException.ThrowIfNull(text);
         return InitialInfoExt.New(text, defaultParaLevel).Base;
+    }
+
+    /// <summary>
+    /// Computes initial bidi classes and paragraph boundaries for text.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <param name="defaultParaLevel">The paragraph level to use, or <see langword="null"/> to determine it from text.</param>
+    /// <returns>The initial bidi information.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    public static InitialInfo Create(string text, Level? defaultParaLevel = null)
+    {
+        return New(text, defaultParaLevel);
     }
 
     internal static (BidiClass[] OriginalClasses, Level ParagraphLevel, bool IsPureLtr, bool HasIsolateControls)
@@ -210,29 +257,60 @@ public sealed class BidiInfo
         Paragraphs = paragraphs;
     }
 
+    /// <summary>
+    /// Gets the original input text.
+    /// </summary>
     public string Text { get; }
 
+    /// <summary>
+    /// Gets the original bidi class for each UTF-16 code unit in the input text.
+    /// </summary>
     public IReadOnlyList<BidiClass> OriginalClasses { get; }
 
+    /// <summary>
+    /// Gets the resolved embedding level for each UTF-16 code unit in the input text.
+    /// </summary>
     public IReadOnlyList<Level> Levels { get; }
 
+    /// <summary>
+    /// Gets the resolved paragraph ranges and paragraph levels.
+    /// </summary>
     public IReadOnlyList<ParagraphInfo> Paragraphs { get; }
 
+    /// <summary>
+    /// Returns whether any resolved embedding level is right-to-left.
+    /// </summary>
     public bool HasRtl()
     {
         return Levels.Any(level => level.IsRtl());
     }
 
+    /// <summary>
+    /// Determines whether the paragraph resolves to left-to-right, right-to-left, or mixed direction.
+    /// </summary>
+    /// <param name="paragraph">The paragraph to inspect.</param>
     public Direction ParagraphDirection(ParagraphInfo paragraph)
     {
         return ParaDirection(Levels.Skip(paragraph.Range.Start).Take(paragraph.Range.Length));
     }
 
+    /// <summary>
+    /// Gets the resolved level at a paragraph-relative UTF-16 code-unit position.
+    /// </summary>
+    /// <param name="paragraph">The paragraph containing the position.</param>
+    /// <param name="position">The UTF-16 code-unit offset relative to the paragraph start.</param>
     public Level LevelAt(ParagraphInfo paragraph, int position)
     {
         return Levels[paragraph.Range.Start + position];
     }
 
+    /// <summary>
+    /// Applies the UAX #9 L1/L2 line reordering rules and returns levels for the whole text.
+    /// </summary>
+    /// <param name="paragraph">The paragraph containing <paramref name="line"/>.</param>
+    /// <param name="line">The line range in UTF-16 code units.</param>
+    /// <returns>A copy of the resolved levels with the specified line adjusted for visual reordering.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="line"/> is outside the input text.</exception>
     public Level[] ReorderedLevels(ParagraphInfo paragraph, TextRange line)
     {
         ValidateLine(line);
@@ -266,6 +344,12 @@ public sealed class BidiInfo
         return levels;
     }
 
+    /// <summary>
+    /// Applies line reordering and returns one level per Unicode scalar value in the input text.
+    /// </summary>
+    /// <param name="paragraph">The paragraph containing <paramref name="line"/>.</param>
+    /// <param name="line">The line range in UTF-16 code units.</param>
+    /// <returns>The reordered levels projected to scalar-value positions.</returns>
     public Level[] ReorderedLevelsPerChar(ParagraphInfo paragraph, TextRange line)
     {
         Level[] levels = ReorderedLevels(paragraph, line);
@@ -274,6 +358,14 @@ public sealed class BidiInfo
             .ToArray();
     }
 
+    /// <summary>
+    /// Returns the visual-order text for a single line.
+    /// </summary>
+    /// <param name="paragraph">The paragraph containing <paramref name="line"/>.</param>
+    /// <param name="line">The line range in UTF-16 code units.</param>
+    /// <returns>The line text reordered into visual order.</returns>
+    /// <remarks>Glyph mirroring and combining-mark shaping are outside this API, matching the upstream crate boundary.</remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="line"/> is outside the input text.</exception>
     public string ReorderLine(ParagraphInfo paragraph, TextRange line)
     {
         ValidateLine(line);
@@ -286,12 +378,23 @@ public sealed class BidiInfo
         return ReorderLine(Text, line, levels, runs);
     }
 
+    /// <summary>
+    /// Gets visual runs for a line after applying UAX #9 line-level reordering.
+    /// </summary>
+    /// <param name="paragraph">The paragraph containing <paramref name="line"/>.</param>
+    /// <param name="line">The line range in UTF-16 code units.</param>
+    /// <returns>The adjusted levels and visual-order UTF-16 ranges.</returns>
     public (Level[] Levels, TextRange[] Runs) VisualRuns(ParagraphInfo paragraph, TextRange line)
     {
         Level[] levels = ReorderedLevels(paragraph, line);
         return VisualRunsForLine(levels, line);
     }
 
+    /// <summary>
+    /// Computes the visual order of level-indexed items.
+    /// </summary>
+    /// <param name="levels">The bidi levels for logical-order items.</param>
+    /// <returns>Indices that map logical-order items into visual order.</returns>
     public static int[] ReorderVisual(IReadOnlyList<Level> levels)
     {
         if (levels.Count == 0)
@@ -341,6 +444,13 @@ public sealed class BidiInfo
         return result;
     }
 
+    /// <summary>
+    /// Computes full bidi information for text.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <param name="defaultParaLevel">The paragraph level to use, or <see langword="null"/> to determine it from text.</param>
+    /// <returns>The resolved bidi information.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     public static BidiInfo New(string text, Level? defaultParaLevel = null)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -365,6 +475,18 @@ public sealed class BidiInfo
             initial.Base.OriginalClasses.ToArray(),
             resolvedLevels.ToArray(),
             initial.Base.Paragraphs.ToArray());
+    }
+
+    /// <summary>
+    /// Computes full bidi information for text.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <param name="defaultParaLevel">The paragraph level to use, or <see langword="null"/> to determine it from text.</param>
+    /// <returns>The resolved bidi information.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    public static BidiInfo Create(string text, Level? defaultParaLevel = null)
+    {
+        return New(text, defaultParaLevel);
     }
 
     internal static ExplicitDiagnostics ComputeExplicitDiagnostics(string text, Level? defaultParaLevel = null)
