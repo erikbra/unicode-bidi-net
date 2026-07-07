@@ -14,38 +14,131 @@ namespace Unicode.Bidi.Tests;
 public class levelTests
 {
     [Fact]
-    public void Constructors_CreateExpectedBaseLevels()
+    public void TestNew()
     {
-        Assert.Equal((byte)0, Level.Ltr().Number());
-        Assert.Equal((byte)1, Level.Rtl().Number());
-        Assert.True(Level.Ltr().IsLtr());
-        Assert.True(Level.Rtl().IsRtl());
+        Assert.Equal((byte)0, Level.New(0).Number());
+        Assert.Equal((byte)1, Level.New(1).Number());
+        Assert.Equal((byte)10, Level.New(10).Number());
+        Assert.Equal((byte)125, Level.New(125).Number());
+        Assert.Equal((byte)126, Level.New(126).Number());
+        Assert.Throws<LevelOutOfRangeException>(() => Level.New(127));
+        Assert.Throws<LevelOutOfRangeException>(() => Level.New(255));
     }
 
     [Fact]
-    public void New_AllowsImplicitMaximumAndRejectsAboveIt()
+    public void TestNewExplicit()
     {
-        Assert.Equal(Level.MaxImplicitDepth, Level.New(Level.MaxImplicitDepth).Number());
+        Assert.Equal((byte)0, Level.NewExplicit(0).Number());
+        Assert.Equal((byte)1, Level.NewExplicit(1).Number());
+        Assert.Equal((byte)10, Level.NewExplicit(10).Number());
+        Assert.Equal((byte)125, Level.NewExplicit(125).Number());
+        Assert.Throws<LevelOutOfRangeException>(() => Level.NewExplicit(126));
+        Assert.Throws<LevelOutOfRangeException>(() => Level.NewExplicit(255));
+    }
 
-        Assert.Throws<LevelOutOfRangeException>(() => Level.New((byte)(Level.MaxImplicitDepth + 1)));
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(10, true)]
+    [InlineData(11, false)]
+    [InlineData(124, true)]
+    [InlineData(125, false)]
+    public void TestIsLtr(byte number, bool expected)
+    {
+        Assert.Equal(expected, Level.New(number).IsLtr());
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(10, false)]
+    [InlineData(11, true)]
+    [InlineData(124, false)]
+    [InlineData(125, true)]
+    public void TestIsRtl(byte number, bool expected)
+    {
+        Assert.Equal(expected, Level.New(number).IsRtl());
     }
 
     [Fact]
-    public void NewExplicit_AllowsExplicitMaximumAndRejectsAboveIt()
+    public void TestRaise()
     {
-        Assert.Equal(Level.MaxExplicitDepth, Level.NewExplicit(Level.MaxExplicitDepth).Number());
+        Level level = Level.Ltr();
 
-        Assert.Throws<LevelOutOfRangeException>(() => Level.NewExplicit((byte)(Level.MaxExplicitDepth + 1)));
+        Assert.Equal((byte)0, level.Number());
+        level = level.Raise(100);
+        Assert.Equal((byte)100, level.Number());
+        level = level.Raise(26);
+        Assert.Equal((byte)126, level.Number());
+        Assert.Throws<LevelOutOfRangeException>(() => level.Raise(1));
+        Assert.Throws<LevelOutOfRangeException>(() => level.Raise(250));
+        Assert.Equal((byte)126, level.Number());
     }
 
     [Fact]
-    public void MutatorLikeHelpers_ReturnAdjustedLevels()
+    public void TestRaiseExplicit()
     {
-        Level level = Level.New(4);
+        Level level = Level.Ltr();
 
-        Assert.Equal((byte)7, level.Raise(3).Number());
-        Assert.Equal((byte)6, level.RaiseExplicit(2).Number());
-        Assert.Equal((byte)2, level.Lower(2).Number());
+        Assert.Equal((byte)0, level.Number());
+        level = level.RaiseExplicit(100);
+        Assert.Equal((byte)100, level.Number());
+        level = level.RaiseExplicit(25);
+        Assert.Equal((byte)125, level.Number());
+        Assert.Throws<LevelOutOfRangeException>(() => level.RaiseExplicit(1));
+        Assert.Throws<LevelOutOfRangeException>(() => level.RaiseExplicit(250));
+        Assert.Equal((byte)125, level.Number());
+    }
+
+    [Fact]
+    public void TestLower()
+    {
+        Level level = Level.Rtl();
+
+        Assert.Equal((byte)1, level.Number());
+        level = level.Lower(1);
+        Assert.Equal((byte)0, level.Number());
+        Assert.Throws<LevelOutOfRangeException>(() => level.Lower(1));
+        Assert.Throws<LevelOutOfRangeException>(() => level.Lower(250));
+        Assert.Equal((byte)0, level.Number());
+    }
+
+    [Theory]
+    [InlineData(new byte[] { 0, 0, 0 }, false)]
+    [InlineData(new byte[] { 0, 1, 0 }, true)]
+    [InlineData(new byte[] { 0, 2, 0 }, false)]
+    [InlineData(new byte[] { 0, 125, 0 }, true)]
+    [InlineData(new byte[] { 0, 126, 0 }, false)]
+    public void TestHasRtl(byte[] levelNumbers, bool expected)
+    {
+        Assert.Equal(expected, levelNumbers.Select(Level.New).Any(level => level.IsRtl()));
+    }
+
+    [Fact]
+    public void TestInto()
+    {
+        Level level = Level.Rtl();
+
+        Assert.Equal((byte)1, level.Number());
+    }
+
+    [Fact]
+    public void TestVec()
+    {
+        Assert.Equal([Level.New(0), Level.New(1), Level.New(125)], ToLevels([0, 1, 125]));
+    }
+
+    [Fact]
+    public void TestStrEq()
+    {
+        Assert.True(LevelsMatch(ToLevels([0, 1, 4, 125]), ["0", "1", "x", "125"]));
+        Assert.False(LevelsMatch(ToLevels([0, 1, 4, 125]), ["0", "1", "5", "125"]));
+    }
+
+    [Fact]
+    public void TestStringEq()
+    {
+        Assert.True(LevelsMatch(ToLevels([0, 1, 4, 125]), ["0".ToString(), "1".ToString(), "x".ToString(), "125".ToString()]));
     }
 
     [Fact]
@@ -58,5 +151,16 @@ public class levelTests
         Assert.Equal((byte)5, level.NewLowestGeRtl().Number());
         Assert.Equal(BidiClass.L, level.BidiClass());
         Assert.Equal(BidiClass.R, Level.New(5).BidiClass());
+    }
+
+    private static bool LevelsMatch(IReadOnlyList<Level> levels, IReadOnlyList<string> expected)
+    {
+        return levels.Count == expected.Count
+            && levels.Zip(expected).All(pair => pair.Second == "x" || pair.First.ToString() == pair.Second);
+    }
+
+    private static Level[] ToLevels(int[] levels)
+    {
+        return levels.Select(level => Level.New((byte)level)).ToArray();
     }
 }

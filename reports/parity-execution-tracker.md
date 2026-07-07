@@ -11,6 +11,7 @@ The preview parity target is Rust `unicode-bidi` `0.3.18` using Unicode data `16
 - Core UBA stages through L2 are ported.
 - Curated Rust parity harness is part of CI.
 - Unicode conformance data is fetched on demand and run through bounded PR-adjacent checks plus a scheduled full ratchet workflow.
+- Upstream Rust unit-test parity is tracked in `reports/upstream-unit-test-parity.md`.
 - Package metadata is ready for preview NuGet packing.
 
 ## Baselines
