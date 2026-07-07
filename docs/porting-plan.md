@@ -12,6 +12,7 @@ The port is organized as sequential GitHub issues so each PR can stay focused an
 ## Organization Rules
 
 - Prefer file names that match Rust modules when that makes tracking easier.
+- Use UTF-16 code-unit indices for .NET public ranges and compare them to Rust `unicode_bidi::utf16` APIs.
 - Keep generated Unicode data in `char_data/tables.g.cs`.
 - Keep harnesses under `tools/parity` and make them runnable outside CI.
 - Track accepted divergences with issue ownership instead of broad allowances.

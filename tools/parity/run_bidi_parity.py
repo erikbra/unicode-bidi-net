@@ -12,13 +12,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES = ROOT / "tools/parity/bidi-class-cases.txt"
+DEFAULT_INITIAL_CASES = ROOT / "tools/parity/initial-info-cases.txt"
 DOTNET_PROBE = ROOT / "tools/parity/dotnet_probe/UnicodeBidiDotnetProbe.csproj"
 RUST_PROBE = ROOT / "tools/parity/rust_probe/Cargo.toml"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Compare selected .NET bidi results with unicode-bidi 0.3.18.")
-    parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
+    parser.add_argument("--bidi-class-cases", type=Path, default=DEFAULT_CASES)
+    parser.add_argument("--initial-info-cases", type=Path, default=DEFAULT_INITIAL_CASES)
     parser.add_argument("--out-dir", type=Path, default=ROOT / "artifacts/bidi-parity")
     args = parser.parse_args()
 
@@ -26,7 +28,8 @@ def main() -> int:
     require_tool("dotnet", env)
     require_tool("cargo", env)
 
-    cases = read_cases(args.cases)
+    bidi_class_cases = read_bidi_class_cases(args.bidi_class_cases)
+    initial_info_cases = read_initial_info_cases(args.initial_info_cases)
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     subprocess.run(
@@ -38,7 +41,7 @@ def main() -> int:
 
     rows = []
     failures = []
-    for code_point in cases:
+    for code_point in bidi_class_cases:
         rust = run_probe(
             ["cargo", "run", "--quiet", "--manifest-path", str(RUST_PROBE), "--", "bidi-class", code_point],
             env,
@@ -59,20 +62,58 @@ def main() -> int:
             env,
         )
         ok = rust == dotnet
-        row = {"codePoint": code_point, "rust": rust, "dotnet": dotnet, "ok": ok}
+        row = {"kind": "bidi-class", "codePoint": code_point, "rust": rust, "dotnet": dotnet, "ok": ok}
         rows.append(row)
         if not ok:
             failures.append(row)
 
-    (args.out_dir / "bidi-class-results.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-    summary = f"bidi-class parity: {len(cases) - len(failures)}/{len(cases)} matched"
+    for case in initial_info_cases:
+        rust = run_probe(
+            [
+                "cargo",
+                "run",
+                "--quiet",
+                "--manifest-path",
+                str(RUST_PROBE),
+                "--",
+                "initial-info",
+                case["units"],
+                case["defaultLevel"],
+            ],
+            env,
+        )
+        dotnet = run_probe(
+            [
+                "dotnet",
+                "run",
+                "--project",
+                str(DOTNET_PROBE),
+                "--configuration",
+                "Release",
+                "--no-build",
+                "--",
+                "initial-info",
+                case["units"],
+                case["defaultLevel"],
+            ],
+            env,
+        )
+        ok = rust == dotnet
+        row = {"kind": "initial-info", **case, "rust": rust, "dotnet": dotnet, "ok": ok}
+        rows.append(row)
+        if not ok:
+            failures.append(row)
+
+    (args.out_dir / "results.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    total = len(bidi_class_cases) + len(initial_info_cases)
+    summary = f"bidi parity: {total - len(failures)}/{total} matched"
     (args.out_dir / "summary.md").write_text(f"# Bidi Parity\n\n{summary}\n", encoding="utf-8")
     print(summary)
 
     if failures:
         for failure in failures:
             print(
-                f"mismatch {failure['codePoint']}: rust={failure['rust']} dotnet={failure['dotnet']}",
+                f"mismatch {failure}: rust={failure['rust']} dotnet={failure['dotnet']}",
                 file=sys.stderr,
             )
         return 1
@@ -80,13 +121,28 @@ def main() -> int:
     return 0
 
 
-def read_cases(path: Path) -> list[str]:
+def read_bidi_class_cases(path: Path) -> list[str]:
     cases = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         cases.append(line.split()[0])
+    return cases
+
+
+def read_initial_info_cases(path: Path) -> list[dict[str, str]]:
+    cases = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) == 2:
+            parts.append("")
+        if len(parts) != 3:
+            raise ValueError(f"Invalid initial-info case: {line}")
+        cases.append({"name": parts[0], "defaultLevel": parts[1], "units": parts[2]})
     return cases
 
 

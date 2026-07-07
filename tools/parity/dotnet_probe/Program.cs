@@ -1,17 +1,48 @@
+/*
+ * Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).
+ * Adapted for parity checks against Rust unicode-bidi with AI assistance.
+ *
+ * UNICODE_BIDI_RUST_SOURCE_PATH: src/char_data/mod.rs
+ * UNICODE_BIDI_RUST_VERSION: 0.3.18
+ * PORT_MODE: parity-harness
+ */
+
 using System.Globalization;
 using System.Text;
+using Unicode.Bidi;
 using Unicode.Bidi.char_data;
 
-if (args.Length != 2 || args[0] != "bidi-class")
+if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: dotnet run --project tools/parity/dotnet_probe -- bidi-class <codepoint>");
+    Usage();
     return 2;
 }
 
-int codePoint = ParseCodePoint(args[1]);
-BidiClass bidiClass = CharData.BidiClass(new Rune(codePoint));
-Console.WriteLine(bidiClass);
-return 0;
+switch (args[0])
+{
+    case "bidi-class" when args.Length == 2:
+        int codePoint = ParseCodePoint(args[1]);
+        BidiClass bidiClass = CharData.BidiClass(new Rune(codePoint));
+        Console.WriteLine(bidiClass);
+        return 0;
+
+    case "initial-info" when args.Length == 3:
+        string text = ParseUtf16Text(args[1]);
+        InitialInfo initialInfo = InitialInfo.New(text, ParseDefaultLevel(args[2]));
+        Console.WriteLine(FormatInitialInfo(initialInfo));
+        return 0;
+
+    default:
+        Usage();
+        return 2;
+}
+
+static void Usage()
+{
+    Console.Error.WriteLine("usage:");
+    Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-class <codepoint>");
+    Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
+}
 
 static int ParseCodePoint(string value)
 {
@@ -21,4 +52,36 @@ static int ParseCodePoint(string value)
     }
 
     return int.Parse(value, CultureInfo.InvariantCulture);
+}
+
+static string ParseUtf16Text(string value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return string.Empty;
+    }
+
+    return new string(value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(unit => (char)int.Parse(unit, NumberStyles.HexNumber, CultureInfo.InvariantCulture))
+        .ToArray());
+}
+
+static Level? ParseDefaultLevel(string value)
+{
+    return value switch
+    {
+        "auto" => null,
+        "ltr" => Level.Ltr(),
+        "rtl" => Level.Rtl(),
+        _ => Level.New(byte.Parse(value, CultureInfo.InvariantCulture)),
+    };
+}
+
+static string FormatInitialInfo(InitialInfo initialInfo)
+{
+    string classes = string.Join(",", initialInfo.OriginalClasses);
+    string paragraphs = string.Join(",", initialInfo.Paragraphs.Select(paragraph =>
+        $"{paragraph.Range.Start}-{paragraph.Range.End}:{paragraph.Level.Number()}"));
+
+    return $"classes={classes};paragraphs={paragraphs}";
 }

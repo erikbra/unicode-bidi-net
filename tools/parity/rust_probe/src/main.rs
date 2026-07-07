@@ -2,28 +2,88 @@ use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 3 || args[1] != "bidi-class" {
-        eprintln!("usage: cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- bidi-class <codepoint>");
-        std::process::exit(2);
+    match args.get(1).map(String::as_str) {
+        Some("bidi-class") if args.len() == 3 => print_bidi_class(&args[2]),
+        Some("initial-info") if args.len() == 4 => print_initial_info(&args[2], &args[3]),
+        _ => {
+            eprintln!("usage:");
+            eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- bidi-class <codepoint>");
+            eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
+            std::process::exit(2);
+        }
     }
+}
 
-    let code_point = parse_code_point(&args[2]).unwrap_or_else(|| {
-        eprintln!("invalid codepoint: {}", args[2]);
+fn parse_code_point(value: &str) -> Option<u32> {
+    if let Some(hex) = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
+    {
+        u32::from_str_radix(hex, 16).ok()
+    } else {
+        value.parse().ok()
+    }
+}
+
+fn print_bidi_class(value: &str) {
+    let code_point = parse_code_point(value).unwrap_or_else(|| {
+        eprintln!("invalid codepoint: {}", value);
         std::process::exit(2);
     });
 
     let ch = char::from_u32(code_point).unwrap_or_else(|| {
-        eprintln!("invalid Unicode scalar value: {}", args[2]);
+        eprintln!("invalid Unicode scalar value: {}", value);
         std::process::exit(2);
     });
 
     println!("{:?}", unicode_bidi::bidi_class(ch));
 }
 
-fn parse_code_point(value: &str) -> Option<u32> {
-    if let Some(hex) = value.strip_prefix("0x").or_else(|| value.strip_prefix("0X")) {
-        u32::from_str_radix(hex, 16).ok()
-    } else {
-        value.parse().ok()
+fn print_initial_info(units: &str, default_level: &str) {
+    let text = parse_utf16_units(units);
+    let initial = unicode_bidi::utf16::InitialInfo::new(&text, parse_default_level(default_level));
+    let classes = initial
+        .original_classes
+        .iter()
+        .map(|class| format!("{:?}", class))
+        .collect::<Vec<_>>()
+        .join(",");
+    let paragraphs = initial
+        .paragraphs
+        .iter()
+        .map(|paragraph| {
+            format!(
+                "{}-{}:{}",
+                paragraph.range.start,
+                paragraph.range.end,
+                paragraph.level.number()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+
+    println!("classes={};paragraphs={}", classes, paragraphs);
+}
+
+fn parse_utf16_units(value: &str) -> Vec<u16> {
+    if value.trim().is_empty() {
+        return Vec::new();
+    }
+
+    value
+        .split(',')
+        .map(|unit| u16::from_str_radix(unit.trim(), 16).expect("invalid UTF-16 code unit"))
+        .collect()
+}
+
+fn parse_default_level(value: &str) -> Option<unicode_bidi::Level> {
+    match value {
+        "auto" => None,
+        "ltr" => Some(unicode_bidi::Level::ltr()),
+        "rtl" => Some(unicode_bidi::Level::rtl()),
+        number => Some(
+            unicode_bidi::Level::new(number.parse().expect("invalid level"))
+                .expect("level out of range"),
+        ),
     }
 }
