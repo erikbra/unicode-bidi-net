@@ -1,0 +1,6 @@
+# name default-level utf16-code-units
+explicit-rle auto 0061,202B,05D0,202C,0062
+explicit-lre-in-rtl auto 05D0,202A,0061,202C,05D1
+explicit-rlo auto 0061,202E,0062,202C
+isolate-rli auto 0061,2067,05D0,2069,0062
+paragraphs-explicit auto 0061,202B,05D0,202C,000A,05D1

@@ -171,7 +171,7 @@ public sealed class InitialInfo
         return (originalClasses.ToArray(), paraLevel ?? Level.LtrLevel, isPureLtr, hasIsolateControls);
     }
 
-    private static IEnumerable<TextScalar> EnumerateScalars(string text)
+    internal static IEnumerable<TextScalar> EnumerateScalars(string text)
     {
         for (int i = 0; i < text.Length;)
         {
@@ -194,7 +194,7 @@ public sealed class InitialInfo
         }
     }
 
-    private readonly record struct TextScalar(int CodeUnitIndex, int CodeUnitLength, Rune Rune);
+    internal readonly record struct TextScalar(int CodeUnitIndex, int CodeUnitLength, Rune Rune);
 }
 
 /// <summary>
@@ -223,22 +223,172 @@ public sealed class BidiInfo
         ArgumentNullException.ThrowIfNull(text);
 
         InitialInfoExt initial = InitialInfoExt.New(text, defaultParaLevel);
-        Level[] levels = new Level[text.Length];
-        foreach (ParagraphInfo paragraph in initial.Base.Paragraphs)
+        BidiClass[] processingClasses = initial.Base.OriginalClasses.ToArray();
+        List<Level> resolvedLevels = [];
+        foreach ((ParagraphInfo paragraph, ParagraphInfoFlags flags) in initial.Base.Paragraphs.Zip(initial.Flags))
         {
-            for (int i = paragraph.Range.Start; i < paragraph.Range.End; i++)
-            {
-                levels[i] = paragraph.Level;
-            }
+            ComputeBidiInfoForPara(
+                paragraph,
+                flags.IsPureLtr,
+                flags.HasIsolateControls,
+                text,
+                initial.Base.OriginalClasses.ToArray(),
+                processingClasses,
+                resolvedLevels);
         }
 
         return new BidiInfo(
             text,
             initial.Base.OriginalClasses.ToArray(),
-            levels,
+            resolvedLevels.ToArray(),
             initial.Base.Paragraphs.ToArray());
     }
+
+    internal static ExplicitDiagnostics ComputeExplicitDiagnostics(string text, Level? defaultParaLevel = null)
+    {
+        InitialInfoExt initial = InitialInfoExt.New(text, defaultParaLevel);
+        BidiClass[] processingClasses = initial.Base.OriginalClasses.ToArray();
+        List<Level> levels = [];
+        List<ParagraphExplicitDiagnostics> paragraphDiagnostics = [];
+
+        foreach ((ParagraphInfo paragraph, ParagraphInfoFlags flags) in initial.Base.Paragraphs.Zip(initial.Flags))
+        {
+            BidiClass[] paragraphOriginalClasses = initial.Base.OriginalClasses
+                .Skip(paragraph.Range.Start)
+                .Take(paragraph.Range.Length)
+                .ToArray();
+            BidiClass[] paragraphProcessingClasses = processingClasses
+                .Skip(paragraph.Range.Start)
+                .Take(paragraph.Range.Length)
+                .ToArray();
+            Level[] paragraphLevels = Enumerable.Repeat(paragraph.Level, paragraph.Range.Length).ToArray();
+            List<TextRange> levelRuns = [];
+
+            Explicit.Compute(
+                text.Substring(paragraph.Range.Start, paragraph.Range.Length),
+                paragraph.Level,
+                paragraphOriginalClasses,
+                paragraphLevels,
+                paragraphProcessingClasses,
+                levelRuns);
+
+            List<IsolatingRunSequence> sequences = [];
+            Prepare.IsolatingRunSequences(
+                paragraph.Level,
+                paragraphOriginalClasses,
+                paragraphLevels,
+                levelRuns,
+                flags.HasIsolateControls,
+                sequences);
+
+            paragraphDiagnostics.Add(new ParagraphExplicitDiagnostics(
+                paragraph,
+                paragraphLevels,
+                paragraphProcessingClasses,
+                levelRuns.ToArray(),
+                sequences.ToArray()));
+
+            for (int i = paragraph.Range.Start; i < paragraph.Range.End; i++)
+            {
+                int local = i - paragraph.Range.Start;
+                levels.Add(paragraphLevels[local]);
+                processingClasses[i] = paragraphProcessingClasses[local];
+            }
+        }
+
+        return new ExplicitDiagnostics(
+            initial.Base.OriginalClasses.ToArray(),
+            processingClasses,
+            levels.ToArray(),
+            initial.Base.Paragraphs.ToArray(),
+            paragraphDiagnostics.ToArray());
+    }
+
+    private static void ComputeBidiInfoForPara(
+        ParagraphInfo paragraph,
+        bool isPureLtr,
+        bool hasIsolateControls,
+        string text,
+        BidiClass[] originalClasses,
+        BidiClass[] processingClasses,
+        List<Level> levels)
+    {
+        int newLength = levels.Count + paragraph.Range.Length;
+        while (levels.Count < newLength)
+        {
+            levels.Add(paragraph.Level);
+        }
+
+        if (paragraph.Level == Level.LtrLevel && isPureLtr)
+        {
+            return;
+        }
+
+        BidiClass[] paragraphOriginalClasses = originalClasses
+            .Skip(paragraph.Range.Start)
+            .Take(paragraph.Range.Length)
+            .ToArray();
+        BidiClass[] paragraphProcessingClasses = processingClasses
+            .Skip(paragraph.Range.Start)
+            .Take(paragraph.Range.Length)
+            .ToArray();
+        Level[] paragraphLevels = levels
+            .Skip(paragraph.Range.Start)
+            .Take(paragraph.Range.Length)
+            .ToArray();
+        List<TextRange> levelRuns = [];
+
+        Explicit.Compute(
+            text.Substring(paragraph.Range.Start, paragraph.Range.Length),
+            paragraph.Level,
+            paragraphOriginalClasses,
+            paragraphLevels,
+            paragraphProcessingClasses,
+            levelRuns);
+
+        List<IsolatingRunSequence> sequences = [];
+        Prepare.IsolatingRunSequences(
+            paragraph.Level,
+            paragraphOriginalClasses,
+            paragraphLevels,
+            levelRuns,
+            hasIsolateControls,
+            sequences);
+
+        AssignLevelsToRemovedChars(paragraph.Level, paragraphOriginalClasses, paragraphLevels);
+
+        for (int i = 0; i < paragraph.Range.Length; i++)
+        {
+            levels[paragraph.Range.Start + i] = paragraphLevels[i];
+            processingClasses[paragraph.Range.Start + i] = paragraphProcessingClasses[i];
+        }
+    }
+
+    private static void AssignLevelsToRemovedChars(Level paraLevel, IReadOnlyList<BidiClass> classes, Level[] levels)
+    {
+        for (int i = 0; i < levels.Length; i++)
+        {
+            if (Prepare.RemovedByX9(classes[i]))
+            {
+                levels[i] = i > 0 ? levels[i - 1] : paraLevel;
+            }
+        }
+    }
 }
+
+internal sealed record ExplicitDiagnostics(
+    BidiClass[] OriginalClasses,
+    BidiClass[] ProcessingClasses,
+    Level[] Levels,
+    ParagraphInfo[] Paragraphs,
+    ParagraphExplicitDiagnostics[] ParagraphDiagnostics);
+
+internal sealed record ParagraphExplicitDiagnostics(
+    ParagraphInfo Paragraph,
+    Level[] Levels,
+    BidiClass[] ProcessingClasses,
+    TextRange[] LevelRuns,
+    IsolatingRunSequence[] IsolatingRunSequences);
 
 internal sealed class InitialInfoExt
 {
