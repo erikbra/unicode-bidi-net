@@ -1,0 +1,10 @@
+# name default-level utf16-code-units
+empty auto
+simple-ltr auto 0061,0062,0063
+simple-rtl auto 05D0,05D1,05D2
+mixed-paragraphs auto 0061,000A,05D0
+default-rtl rtl 0061,0062
+default-ltr ltr 05D0,05D1
+fsi-rtl auto 2068,05D0,2069
+fsi-ltr auto 2068,0061,2069
+supplementary-ltr auto D83D,DE00,0061

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).
+ * Adapted from Rust unicode-bidi level behavior with AI assistance.
+ *
+ * UNICODE_BIDI_RUST_SOURCE_PATH: src/level.rs
+ * UNICODE_BIDI_RUST_VERSION: 0.3.18
+ * PORT_MODE: test-adapted
+ */
+
 using Unicode.Bidi.char_data;
 
 namespace Unicode.Bidi.Tests;

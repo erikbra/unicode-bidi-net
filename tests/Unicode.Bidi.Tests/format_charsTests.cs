@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).
+ * Adapted from Rust unicode-bidi constants with AI assistance.
+ *
+ * UNICODE_BIDI_RUST_SOURCE_PATH: src/format_chars.rs
+ * UNICODE_BIDI_RUST_VERSION: 0.3.18
+ * PORT_MODE: test-adapted
+ */
+
 namespace Unicode.Bidi.Tests;
 
 public class format_charsTests
