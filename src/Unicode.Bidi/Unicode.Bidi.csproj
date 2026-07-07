@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Unicode.Bidi</PackageId>
+    <Title>Unicode.Bidi</Title>
+    <Description>.NET port of Rust unicode-bidi for the Unicode Bidirectional Algorithm.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>unicode;bidi;bidirectional;text;rtl;ltr</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+
+</Project>

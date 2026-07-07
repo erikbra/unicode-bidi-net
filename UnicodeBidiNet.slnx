@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Unicode.Bidi/Unicode.Bidi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Unicode.Bidi.Tests/Unicode.Bidi.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/parity/dotnet_probe/UnicodeBidiDotnetProbe.csproj" />
+  </Folder>
+</Solution>

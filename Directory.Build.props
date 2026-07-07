@@ -1,0 +1,24 @@
+<Project>
+  <PropertyGroup>
+    <UnicodeBidiNetUpstreamCrate Condition="'$(UnicodeBidiNetUpstreamCrate)' == ''">unicode-bidi</UnicodeBidiNetUpstreamCrate>
+    <UnicodeBidiNetUpstreamVersion Condition="'$(UnicodeBidiNetUpstreamVersion)' == ''">0.3.18</UnicodeBidiNetUpstreamVersion>
+    <UnicodeBidiNetUnicodeVersion Condition="'$(UnicodeBidiNetUnicodeVersion)' == ''">16.0.0</UnicodeBidiNetUnicodeVersion>
+
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.3.18</VersionPrefix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''">preview</VersionSuffix>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">0.3.18.0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">0.3.18.0</FileVersion>
+
+    <Authors>unicode-bidi contributors; Unicode.Bidi contributors</Authors>
+    <Company>Unicode.Bidi contributors</Company>
+    <PackageProjectUrl>https://github.com/erikbra/unicode-bidi-net</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/erikbra/unicode-bidi-net</RepositoryUrl>
+    <PackageReleaseNotes>Tracks $(UnicodeBidiNetUpstreamCrate) $(UnicodeBidiNetUpstreamVersion) with Unicode data $(UnicodeBidiNetUnicodeVersion).</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RepositoryBranch)' == '' and '$(GITHUB_REF_NAME)' != ''">
+    <RepositoryBranch>$(GITHUB_REF_NAME)</RepositoryBranch>
+  </PropertyGroup>
+</Project>
