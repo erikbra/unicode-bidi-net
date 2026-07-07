@@ -1,6 +1,8 @@
 name: Unicode Conformance
 
 on:
+  schedule:
+    - cron: "17 3 * * 0"
   workflow_dispatch:
     inputs:
       suite:
@@ -28,7 +30,7 @@ permissions:
 jobs:
   conformance:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 360
 
     steps:
       - name: Checkout
@@ -45,14 +47,23 @@ jobs:
       - name: Run Unicode conformance
         shell: bash
         run: |
-          if [ "${{ inputs.full }}" = "true" ]; then
-            CASE_ARGS=(--full)
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            SUITE="both"
+            CASE_ARGS=(--full --baseline tools/conformance/full-ratchet-baseline.json --fail-on-failure)
+          elif [ "${{ inputs.full }}" = "true" ]; then
+            SUITE="${{ inputs.suite }}"
+            if [ "$SUITE" = "both" ]; then
+              CASE_ARGS=(--full --baseline tools/conformance/full-ratchet-baseline.json --fail-on-failure)
+            else
+              CASE_ARGS=(--full --fail-on-failure)
+            fi
           else
+            SUITE="${{ inputs.suite }}"
             CASE_ARGS=(--max-cases "${{ inputs.max_cases }}")
           fi
 
           python3 tools/conformance/run_unicode_bidi_conformance.py \
-            --suite "${{ inputs.suite }}" \
+            --suite "$SUITE" \
             "${CASE_ARGS[@]}" \
             --out-dir artifacts/bidi-conformance \
             --fail-on-regression

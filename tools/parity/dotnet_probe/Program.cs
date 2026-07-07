@@ -50,6 +50,9 @@ switch (args[0])
         Console.WriteLine(FormatConformance(conformanceInfo));
         return 0;
 
+    case "conformance-batch" when args.Length == 1:
+        return RunConformanceBatch();
+
     default:
         Usage();
         return 2;
@@ -63,6 +66,7 @@ static void Usage()
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-info <utf16-code-units> <auto|ltr|rtl|number>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- reorder-line <utf16-code-units> <auto|ltr|rtl|number>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- conformance <utf16-code-units> <auto|ltr|rtl|number>");
+    Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- conformance-batch < cases.tsv");
 }
 
 static int ParseCodePoint(string value)
@@ -126,6 +130,26 @@ static string FormatReorderedLines(BidiInfo bidiInfo)
 static string FormatUtf16Units(string text)
 {
     return string.Join(",", text.Select(c => ((int)c).ToString("X4", CultureInfo.InvariantCulture)));
+}
+
+static int RunConformanceBatch()
+{
+    string? line;
+    while ((line = Console.In.ReadLine()) is not null)
+    {
+        string[] fields = line.Split('\t');
+        if (fields.Length != 2)
+        {
+            Console.Error.WriteLine("conformance-batch expects '<utf16-code-units>\\t<auto|ltr|rtl|number>' per line.");
+            return 2;
+        }
+
+        string text = ParseUtf16Text(fields[0]);
+        BidiInfo bidiInfo = BidiInfo.New(text, ParseDefaultLevel(fields[1]));
+        Console.WriteLine(FormatConformance(bidiInfo));
+    }
+
+    return 0;
 }
 
 static string FormatConformance(BidiInfo bidiInfo)
