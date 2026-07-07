@@ -14,7 +14,6 @@
  */
 
 using System.Text;
-using Unicode.Bidi.char_data;
 
 namespace Unicode.Bidi;
 

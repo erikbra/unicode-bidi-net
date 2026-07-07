@@ -13,6 +13,8 @@
  * Licensed under the Apache License, Version 2.0 or the MIT license, at your option.
  */
 
+using Unicode.Bidi;
+
 namespace Unicode.Bidi.char_data;
 
 internal readonly record struct BidiClassRange(int Lo, int Hi, BidiClass Class);

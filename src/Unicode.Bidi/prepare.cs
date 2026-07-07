@@ -13,8 +13,6 @@
  * Licensed under the Apache License, Version 2.0 or the MIT license, at your option.
  */
 
-using Unicode.Bidi.char_data;
-
 namespace Unicode.Bidi;
 
 internal sealed record IsolatingRunSequence(TextRange[] Runs, BidiClass Sos, BidiClass Eos)

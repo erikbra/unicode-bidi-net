@@ -14,6 +14,23 @@ The port intentionally keeps source organization close to the Rust crate so indi
 
 .NET strings are UTF-16, so public text ranges and per-code-unit arrays in this port use UTF-16 code-unit indices. The parity harness compares these results against Rust's `unicode_bidi::utf16` module.
 
+## Usage
+
+Install the package as `Unicode.Bidi` and import the root namespace:
+
+```csharp
+using Unicode.Bidi;
+
+BidiInfo info = BidiInfo.Create("abc אבג", Level.Ltr());
+ParagraphInfo paragraph = info.Paragraphs[0];
+string visual = info.ReorderLine(paragraph, paragraph.Range);
+
+BidiClass alefClass = CharData.BidiClass('\u05D0');
+Level explicitLevel = Level.CreateExplicit(1);
+```
+
+Rust-compatible factory names such as `BidiInfo.New` and `Level.New` are kept for source traceability. .NET-style `Create` aliases are available on the main entry points.
+
 ## Local Validation
 
 ```bash

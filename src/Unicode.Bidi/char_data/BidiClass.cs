@@ -13,7 +13,7 @@
  * Licensed under the Apache License, Version 2.0 or the MIT license, at your option.
  */
 
-namespace Unicode.Bidi.char_data;
+namespace Unicode.Bidi;
 
 /// <summary>
 /// Represents values of the Unicode Bidi_Class property.

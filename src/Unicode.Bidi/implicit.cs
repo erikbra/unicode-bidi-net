@@ -14,7 +14,6 @@
  */
 
 using System.Text;
-using Unicode.Bidi.char_data;
 
 namespace Unicode.Bidi;
 
@@ -424,7 +423,7 @@ internal static class Implicit
                     continue;
                 }
 
-                BidiMatchedOpeningBracket? matched = CharData.BidiMatchedOpeningBracket(scalar.Rune);
+                var matched = CharData.BidiMatchedOpeningBracket(scalar.Rune);
                 if (!matched.HasValue)
                 {
                     continue;

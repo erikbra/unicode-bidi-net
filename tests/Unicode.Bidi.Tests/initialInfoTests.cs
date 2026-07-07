@@ -7,8 +7,6 @@
  * PORT_MODE: test-adapted
  */
 
-using Unicode.Bidi.char_data;
-
 namespace Unicode.Bidi.Tests;
 
 public class initialInfoTests

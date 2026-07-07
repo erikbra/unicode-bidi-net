@@ -78,6 +78,8 @@ def render(ranges: list[tuple[int, int, str]], pairs: list[tuple[int, int, int |
  * Licensed under the Apache License, Version 2.0 or the MIT license, at your option.
  */
 
+using Unicode.Bidi;
+
 namespace Unicode.Bidi.char_data;
 
 internal static class Tables
