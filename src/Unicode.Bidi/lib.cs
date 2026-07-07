@@ -337,9 +337,10 @@ public sealed class BidiInfo
             .Take(paragraph.Range.Length)
             .ToArray();
         List<TextRange> levelRuns = [];
+        string paragraphText = text.Substring(paragraph.Range.Start, paragraph.Range.Length);
 
         Explicit.Compute(
-            text.Substring(paragraph.Range.Start, paragraph.Range.Length),
+            paragraphText,
             paragraph.Level,
             paragraphOriginalClasses,
             paragraphLevels,
@@ -355,6 +356,18 @@ public sealed class BidiInfo
             hasIsolateControls,
             sequences);
 
+        foreach (IsolatingRunSequence sequence in sequences)
+        {
+            Implicit.ResolveWeak(paragraphText, sequence, paragraphProcessingClasses);
+            Implicit.ResolveNeutral(
+                paragraphText,
+                sequence,
+                paragraphLevels,
+                paragraphOriginalClasses,
+                paragraphProcessingClasses);
+        }
+
+        Implicit.ResolveLevels(paragraphProcessingClasses, paragraphLevels);
         AssignLevelsToRemovedChars(paragraph.Level, paragraphOriginalClasses, paragraphLevels);
 
         for (int i = 0; i < paragraph.Range.Length; i++)
