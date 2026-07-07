@@ -8,7 +8,9 @@ This project tracks Rust `unicode-bidi` `0.3.18`, with .NET APIs shaped around U
 - `Level` creation, level arithmetic, and direction helpers.
 - Unicode formatting character constants.
 - `InitialInfo.New`.
+- `InitialInfo.Create` as an idiomatic .NET alias for `InitialInfo.New`.
 - `BidiInfo.New`.
+- `BidiInfo.Create` as an idiomatic .NET alias for `BidiInfo.New`.
 - Explicit, prepare, weak, neutral, implicit, and level resolution stages.
 - `BidiInfo.ReorderedLevels`.
 - `BidiInfo.ReorderedLevelsPerChar`.
@@ -26,6 +28,10 @@ This project tracks Rust `unicode-bidi` `0.3.18`, with .NET APIs shaped around U
 - Custom `BidiDataSource`, `no_std`, `serde`, and deprecated Rust modules are not ported. These are Rust ecosystem features rather than .NET package requirements.
 - Rule L3 combining-mark shaping and L4 glyph mirroring are not performed by `ReorderLine`, matching the upstream crate's documented display API boundary.
 
-## Follow-Up Issues
+## Review Decisions
 
-- [#12](https://github.com/erikbra/unicode-bidi-net/issues/12): post-preview API compatibility and documentation review.
+- Keep Rust-style `New` factory names as the traceable primary API.
+- Add `Create` aliases only for `InitialInfo` and `BidiInfo`, where .NET callers naturally enter the library.
+- Defer a single-paragraph convenience type comparable to Rust `ParagraphBidiInfo`; the current `BidiInfo` plus `ParagraphInfo` surface already preserves paragraph metadata without introducing another ownership shape.
+- Keep `net10.0` for the preview package and revisit broader target frameworks once the consuming PdfBox.Net integration proves the required baseline.
+- Ship XML documentation for the public preview surface.

@@ -22,8 +22,17 @@ namespace Unicode.Bidi.char_data;
 /// </summary>
 public static class CharData
 {
+    /// <summary>
+    /// Gets the Unicode Character Database version used by this package.
+    /// </summary>
     public static (int Major, int Minor, int Patch) UnicodeVersion => (16, 0, 0);
 
+    /// <summary>
+    /// Looks up the Unicode Bidi_Class value for a BMP character.
+    /// </summary>
+    /// <param name="c">The UTF-16 character to classify. Surrogates are rejected.</param>
+    /// <returns>The bidi class for <paramref name="c"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="c"/> is a surrogate code unit.</exception>
     public static BidiClass BidiClass(char c)
     {
         if (char.IsSurrogate(c))
@@ -34,6 +43,11 @@ public static class CharData
         return BidiClass(new Rune(c));
     }
 
+    /// <summary>
+    /// Looks up the Unicode Bidi_Class value for a Unicode scalar value.
+    /// </summary>
+    /// <param name="rune">The Unicode scalar value to classify.</param>
+    /// <returns>The bidi class for <paramref name="rune"/>.</returns>
     public static BidiClass BidiClass(Rune rune)
     {
         int codePoint = rune.Value;
@@ -63,6 +77,10 @@ public static class CharData
         return global::Unicode.Bidi.char_data.BidiClass.L;
     }
 
+    /// <summary>
+    /// Returns whether the bidi class is a right-to-left explicit or isolate formatting class.
+    /// </summary>
+    /// <param name="bidiClass">The bidi class to inspect.</param>
     public static bool IsRtl(BidiClass bidiClass)
     {
         return bidiClass is global::Unicode.Bidi.char_data.BidiClass.RLE

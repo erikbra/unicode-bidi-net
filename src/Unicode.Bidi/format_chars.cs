@@ -20,18 +20,30 @@ namespace Unicode.Bidi;
 /// </summary>
 public static class FormatChars
 {
+    /// <summary>Arabic Letter Mark.</summary>
     public const char ALM = '\u061C';
+    /// <summary>Left-to-Right Mark.</summary>
     public const char LRM = '\u200E';
+    /// <summary>Right-to-Left Mark.</summary>
     public const char RLM = '\u200F';
 
+    /// <summary>Left-to-Right Isolate.</summary>
     public const char LRI = '\u2066';
+    /// <summary>Right-to-Left Isolate.</summary>
     public const char RLI = '\u2067';
+    /// <summary>First Strong Isolate.</summary>
     public const char FSI = '\u2068';
+    /// <summary>Pop Directional Isolate.</summary>
     public const char PDI = '\u2069';
 
+    /// <summary>Left-to-Right Embedding.</summary>
     public const char LRE = '\u202A';
+    /// <summary>Right-to-Left Embedding.</summary>
     public const char RLE = '\u202B';
+    /// <summary>Pop Directional Format.</summary>
     public const char PDF = '\u202C';
+    /// <summary>Left-to-Right Override.</summary>
     public const char LRO = '\u202D';
+    /// <summary>Right-to-Left Override.</summary>
     public const char RLO = '\u202E';
 }

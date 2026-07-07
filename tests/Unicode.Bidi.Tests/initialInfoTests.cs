@@ -68,6 +68,15 @@ public class initialInfoTests
     }
 
     [Fact]
+    public void Create_MatchesNew()
+    {
+        InitialInfo initialInfo = InitialInfo.Create("abc", Level.Rtl());
+
+        Assert.Equal(Level.Rtl(), Assert.Single(initialInfo.Paragraphs).Level);
+        Assert.Equal([BidiClass.L, BidiClass.L, BidiClass.L], initialInfo.OriginalClasses);
+    }
+
+    [Fact]
     public void New_ResolvesFirstStrongIsolateClassWhenStrongCharacterIsPresent()
     {
         InitialInfo rtlIsolate = InitialInfo.New($"{FormatChars.FSI}\u05D0{FormatChars.PDI}");
