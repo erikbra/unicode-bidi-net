@@ -1,0 +1,75 @@
+name: Unicode Conformance
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Conformance suite to run"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - character
+          - class
+      max_cases:
+        description: "Maximum cases for bounded runs"
+        required: true
+        default: "1000"
+      full:
+        description: "Run the full selected corpus"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Fetch Unicode conformance data
+        run: python3 tools/conformance/fetch_unicode_bidi_tests.py
+
+      - name: Run Unicode conformance
+        shell: bash
+        run: |
+          if [ "${{ inputs.full }}" = "true" ]; then
+            CASE_ARGS=(--full)
+          else
+            CASE_ARGS=(--max-cases "${{ inputs.max_cases }}")
+          fi
+
+          python3 tools/conformance/run_unicode_bidi_conformance.py \
+            --suite "${{ inputs.suite }}" \
+            "${CASE_ARGS[@]}" \
+            --out-dir artifacts/bidi-conformance \
+            --fail-on-regression
+
+      - name: Conformance summary
+        if: ${{ always() }}
+        run: |
+          if [ -f artifacts/bidi-conformance/summary.md ]; then
+            cat artifacts/bidi-conformance/summary.md
+            cat artifacts/bidi-conformance/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Unicode conformance summary was not generated."
+          fi
+
+      - name: Upload conformance artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bidi-conformance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/bidi-conformance

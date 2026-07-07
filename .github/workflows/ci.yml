@@ -32,12 +32,19 @@ jobs:
       - name: Test
         run: dotnet test UnicodeBidiNet.slnx --configuration Release --no-build --nologo
 
+      - name: Pack
+        run: dotnet pack src/Unicode.Bidi/Unicode.Bidi.csproj --configuration Release --no-build --output artifacts/packages
+
       - name: Fetch upstream crate
         run: ./tools/fetch-upstream.sh
 
       - name: Parity harness smoke
         run: |
-          python3 -m py_compile tools/generate_char_data.py tools/parity/run_bidi_parity.py
+          python3 -m py_compile \
+            tools/generate_char_data.py \
+            tools/parity/run_bidi_parity.py \
+            tools/conformance/fetch_unicode_bidi_tests.py \
+            tools/conformance/run_unicode_bidi_conformance.py
           python3 tools/parity/run_bidi_parity.py --out-dir artifacts/bidi-parity
 
       - name: Parity summary

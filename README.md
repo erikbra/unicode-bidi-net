@@ -5,10 +5,10 @@
 The port intentionally keeps source organization close to the Rust crate so individual files can be compared as the implementation grows:
 
 - `src/Unicode.Bidi/char_data` mirrors `src/char_data`.
-- `src/Unicode.Bidi/lib.cs` mirrors the initial-info and paragraph-construction parts of `src/lib.rs`.
+- `src/Unicode.Bidi/lib.cs` mirrors the public `BidiInfo` construction and reordering APIs from `src/lib.rs`.
 - `src/Unicode.Bidi/level.cs` mirrors `src/level.rs`.
 - `src/Unicode.Bidi/format_chars.cs` mirrors `src/format_chars.rs`.
-- Future issues will add `explicit`, `implicit`, `prepare`, and the remaining `lib.rs` public API in the same style.
+- `src/Unicode.Bidi/explicit.cs`, `prepare.cs`, and `implicit.cs` mirror the matching Rust modules.
 
 ## Indexing Policy
 
@@ -36,3 +36,27 @@ If Rust is not installed globally, use the repo-local bootstrap:
 ./tools/bootstrap-local-rust.sh
 python3 tools/parity/run_bidi_parity.py --out-dir artifacts/bidi-parity
 ```
+
+## Unicode Conformance
+
+The larger Unicode 16.0.0 conformance files are downloaded on demand into `artifacts/`:
+
+```bash
+python3 tools/conformance/fetch_unicode_bidi_tests.py
+python3 tools/conformance/run_unicode_bidi_conformance.py \
+  --max-cases 1000 \
+  --out-dir artifacts/bidi-conformance \
+  --fail-on-regression
+```
+
+Use `--full` for a full local/provisioned run. GitHub Actions also provides a manual **Unicode Conformance** workflow.
+
+## Packaging
+
+Preview packages can be produced locally with:
+
+```bash
+dotnet pack src/Unicode.Bidi/Unicode.Bidi.csproj --configuration Release --output artifacts/packages
+```
+
+See `docs/api-compatibility.md` and `docs/conformance.md` for the current parity notes and conformance workflow.
