@@ -38,6 +38,12 @@ switch (args[0])
         Console.WriteLine(FormatBidiInfo(bidiInfo));
         return 0;
 
+    case "reorder-line" when args.Length == 3:
+        string reorderText = ParseUtf16Text(args[1]);
+        BidiInfo reorderInfo = BidiInfo.New(reorderText, ParseDefaultLevel(args[2]));
+        Console.WriteLine(FormatReorderedLines(reorderInfo));
+        return 0;
+
     default:
         Usage();
         return 2;
@@ -49,6 +55,7 @@ static void Usage()
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-class <codepoint>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-info <utf16-code-units> <auto|ltr|rtl|number>");
+    Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- reorder-line <utf16-code-units> <auto|ltr|rtl|number>");
 }
 
 static int ParseCodePoint(string value)
@@ -100,4 +107,16 @@ static string FormatBidiInfo(BidiInfo bidiInfo)
         $"{paragraph.Range.Start}-{paragraph.Range.End}:{paragraph.Level.Number()}"));
     string levels = string.Join(",", bidiInfo.Levels.Select(level => level.Number()));
     return $"classes={classes};paragraphs={paragraphs};levels={levels}";
+}
+
+static string FormatReorderedLines(BidiInfo bidiInfo)
+{
+    string lines = string.Join("|", bidiInfo.Paragraphs.Select(paragraph =>
+        FormatUtf16Units(bidiInfo.ReorderLine(paragraph, paragraph.Range))));
+    return $"lines={lines}";
+}
+
+static string FormatUtf16Units(string text)
+{
+    return string.Join(",", text.Select(c => ((int)c).ToString("X4", CultureInfo.InvariantCulture)));
 }
