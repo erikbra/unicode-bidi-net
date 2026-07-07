@@ -32,6 +32,12 @@ switch (args[0])
         Console.WriteLine(FormatInitialInfo(initialInfo));
         return 0;
 
+    case "bidi-info" when args.Length == 3:
+        string bidiText = ParseUtf16Text(args[1]);
+        BidiInfo bidiInfo = BidiInfo.New(bidiText, ParseDefaultLevel(args[2]));
+        Console.WriteLine(FormatBidiInfo(bidiInfo));
+        return 0;
+
     default:
         Usage();
         return 2;
@@ -42,6 +48,7 @@ static void Usage()
     Console.Error.WriteLine("usage:");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-class <codepoint>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
+    Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-info <utf16-code-units> <auto|ltr|rtl|number>");
 }
 
 static int ParseCodePoint(string value)
@@ -84,4 +91,13 @@ static string FormatInitialInfo(InitialInfo initialInfo)
         $"{paragraph.Range.Start}-{paragraph.Range.End}:{paragraph.Level.Number()}"));
 
     return $"classes={classes};paragraphs={paragraphs}";
+}
+
+static string FormatBidiInfo(BidiInfo bidiInfo)
+{
+    string classes = string.Join(",", bidiInfo.OriginalClasses);
+    string paragraphs = string.Join(",", bidiInfo.Paragraphs.Select(paragraph =>
+        $"{paragraph.Range.Start}-{paragraph.Range.End}:{paragraph.Level.Number()}"));
+    string levels = string.Join(",", bidiInfo.Levels.Select(level => level.Number()));
+    return $"classes={classes};paragraphs={paragraphs};levels={levels}";
 }

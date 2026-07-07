@@ -126,6 +126,26 @@ public readonly record struct Level : IComparable<Level>
         return _value.CompareTo(other._value);
     }
 
+    public static bool operator <(Level left, Level right)
+    {
+        return left._value < right._value;
+    }
+
+    public static bool operator >(Level left, Level right)
+    {
+        return left._value > right._value;
+    }
+
+    public static bool operator <=(Level left, Level right)
+    {
+        return left._value <= right._value;
+    }
+
+    public static bool operator >=(Level left, Level right)
+    {
+        return left._value >= right._value;
+    }
+
     public override string ToString()
     {
         return _value.ToString();

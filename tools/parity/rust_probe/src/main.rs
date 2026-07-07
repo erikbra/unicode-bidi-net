@@ -5,10 +5,12 @@ fn main() {
     match args.get(1).map(String::as_str) {
         Some("bidi-class") if args.len() == 3 => print_bidi_class(&args[2]),
         Some("initial-info") if args.len() == 4 => print_initial_info(&args[2], &args[3]),
+        Some("bidi-info") if args.len() == 4 => print_bidi_info(&args[2], &args[3]),
         _ => {
             eprintln!("usage:");
             eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- bidi-class <codepoint>");
             eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
+            eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- bidi-info <utf16-code-units> <auto|ltr|rtl|number>");
             std::process::exit(2);
         }
     }
@@ -42,6 +44,24 @@ fn print_bidi_class(value: &str) {
 fn print_initial_info(units: &str, default_level: &str) {
     let text = parse_utf16_units(units);
     let initial = unicode_bidi::utf16::InitialInfo::new(&text, parse_default_level(default_level));
+    println!("{}", format_initial_info(&initial));
+}
+
+fn print_bidi_info(units: &str, default_level: &str) {
+    let text = parse_utf16_units(units);
+    let bidi = unicode_bidi::utf16::BidiInfo::new(&text, parse_default_level(default_level));
+    let initial = unicode_bidi::utf16::InitialInfo::new(&text, parse_default_level(default_level));
+    let levels = bidi
+        .levels
+        .iter()
+        .map(|level| level.number().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+
+    println!("{};levels={}", format_initial_info(&initial), levels);
+}
+
+fn format_initial_info(initial: &unicode_bidi::utf16::InitialInfo) -> String {
     let classes = initial
         .original_classes
         .iter()
@@ -62,7 +82,7 @@ fn print_initial_info(units: &str, default_level: &str) {
         .collect::<Vec<_>>()
         .join(",");
 
-    println!("classes={};paragraphs={}", classes, paragraphs);
+    format!("classes={};paragraphs={}", classes, paragraphs)
 }
 
 fn parse_utf16_units(value: &str) -> Vec<u16> {
