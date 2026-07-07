@@ -1,0 +1,240 @@
+name: Publish to NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: "NuGet package version to pack or publish"
+        required: true
+        default: "0.3.18-preview"
+      publish_to_nuget:
+        description: "Push the generated package to nuget.org"
+        required: true
+        default: false
+        type: boolean
+      confirm_package_id:
+        description: "Type Unicode.Bidi to confirm publishing"
+        required: false
+        default: ""
+      run_full_conformance:
+        description: "Run full Unicode conformance before packing"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-nuget-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  PACKAGE_ID: Unicode.Bidi
+  PACKAGE_OUTPUT: artifacts/packages
+
+jobs:
+  pack-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Validate inputs
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          PUBLISH_TO_NUGET: ${{ inputs.publish_to_nuget }}
+          CONFIRM_PACKAGE_ID: ${{ inputs.confirm_package_id }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$PACKAGE_VERSION" =~ ^[0-9]+(\.[0-9]+){2}(-[0-9A-Za-z][0-9A-Za-z.-]*)?(\+[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::package_version must be a SemVer-style NuGet version."
+            exit 1
+          fi
+
+          if [ "$PUBLISH_TO_NUGET" = "true" ]; then
+            if [ "$GITHUB_REF_NAME" != "main" ]; then
+              echo "::error::Publishing is only allowed from the main branch."
+              exit 1
+            fi
+
+            if [ "$CONFIRM_PACKAGE_ID" != "$PACKAGE_ID" ]; then
+              echo "::error::Set confirm_package_id to $PACKAGE_ID before publishing."
+              exit 1
+            fi
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore
+        run: dotnet restore UnicodeBidiNet.slnx
+
+      - name: Build
+        run: dotnet build UnicodeBidiNet.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test UnicodeBidiNet.slnx --configuration Release --no-build --nologo
+
+      - name: Fetch upstream crate
+        run: ./tools/fetch-upstream.sh
+
+      - name: Run Rust parity harness
+        run: |
+          python3 -m py_compile \
+            tools/generate_char_data.py \
+            tools/parity/run_bidi_parity.py \
+            tools/conformance/fetch_unicode_bidi_tests.py \
+            tools/conformance/run_unicode_bidi_conformance.py
+          python3 tools/parity/run_bidi_parity.py --out-dir artifacts/bidi-parity
+
+      - name: Fetch Unicode conformance data
+        if: ${{ inputs.run_full_conformance }}
+        run: python3 tools/conformance/fetch_unicode_bidi_tests.py
+
+      - name: Run full Unicode conformance
+        if: ${{ inputs.run_full_conformance }}
+        run: |
+          python3 tools/conformance/run_unicode_bidi_conformance.py \
+            --suite both \
+            --full \
+            --baseline tools/conformance/full-ratchet-baseline.json \
+            --out-dir artifacts/bidi-conformance \
+            --fail-on-failure \
+            --fail-on-regression
+
+      - name: Pack
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          set -euo pipefail
+          rm -rf "$PACKAGE_OUTPUT"
+          dotnet pack src/Unicode.Bidi/Unicode.Bidi.csproj \
+            --configuration Release \
+            --no-build \
+            --output "$PACKAGE_OUTPUT" \
+            /p:PackageVersion="$PACKAGE_VERSION"
+
+      - name: Verify package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          packages=("$PACKAGE_OUTPUT"/*.nupkg)
+          symbol_packages=("$PACKAGE_OUTPUT"/*.snupkg)
+
+          if [ "${#packages[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one .nupkg in $PACKAGE_OUTPUT, found ${#packages[@]}."
+            exit 1
+          fi
+
+          if [ "${#symbol_packages[@]}" -gt 1 ]; then
+            echo "::error::Expected at most one .snupkg in $PACKAGE_OUTPUT, found ${#symbol_packages[@]}."
+            exit 1
+          fi
+
+          unzip -p "${packages[0]}" "$PACKAGE_ID.nuspec" > "$PACKAGE_OUTPUT/package.nuspec"
+
+          if ! grep -q "<id>$PACKAGE_ID</id>" "$PACKAGE_OUTPUT/package.nuspec"; then
+            echo "::error::Package id is not $PACKAGE_ID."
+            exit 1
+          fi
+
+          echo "nupkg=${packages[0]}" >> "$GITHUB_OUTPUT"
+          if [ "${#symbol_packages[@]}" -eq 1 ]; then
+            echo "snupkg=${symbol_packages[0]}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload package artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ inputs.package_version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/packages
+          if-no-files-found: warn
+
+      - name: Upload parity artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bidi-parity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/bidi-parity
+          if-no-files-found: warn
+
+      - name: Upload conformance artifacts
+        if: ${{ always() && inputs.run_full_conformance }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bidi-conformance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/bidi-conformance
+          if-no-files-found: warn
+
+      - name: Validate NuGet API key
+        if: ${{ inputs.publish_to_nuget }}
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "::error::Set the NUGET_API_KEY repository secret before publishing."
+            exit 1
+          fi
+
+      - name: Push package to nuget.org
+        if: ${{ inputs.publish_to_nuget }}
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUPKG: ${{ steps.package.outputs.nupkg }}
+          SNUPKG: ${{ steps.package.outputs.snupkg }}
+        run: |
+          set -euo pipefail
+
+          dotnet nuget push "$NUPKG" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+          if [ -n "$SNUPKG" ]; then
+            dotnet nuget push "$SNUPKG" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          fi
+
+      - name: Write summary
+        if: ${{ always() }}
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          PUBLISH_TO_NUGET: ${{ inputs.publish_to_nuget }}
+          RUN_FULL_CONFORMANCE: ${{ inputs.run_full_conformance }}
+          NUPKG: ${{ steps.package.outputs.nupkg }}
+          SNUPKG: ${{ steps.package.outputs.snupkg }}
+        run: |
+          {
+            echo "## NuGet publish workflow"
+            echo
+            echo "- Package: \`$PACKAGE_ID\`"
+            echo "- Version: \`$PACKAGE_VERSION\`"
+            echo "- Ref: \`$GITHUB_REF_NAME\`"
+            echo "- Full conformance: \`$RUN_FULL_CONFORMANCE\`"
+            echo "- Publish requested: \`$PUBLISH_TO_NUGET\`"
+            if [ -n "$NUPKG" ]; then
+              echo "- Package artifact: \`$NUPKG\`"
+            fi
+            if [ -n "$SNUPKG" ]; then
+              echo "- Symbol package artifact: \`$SNUPKG\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
