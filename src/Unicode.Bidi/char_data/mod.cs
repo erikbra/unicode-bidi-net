@@ -69,4 +69,20 @@ public static class CharData
             or global::Unicode.Bidi.char_data.BidiClass.RLO
             or global::Unicode.Bidi.char_data.BidiClass.RLI;
     }
+
+    internal static BidiMatchedOpeningBracket? BidiMatchedOpeningBracket(Rune rune)
+    {
+        int codePoint = rune.Value;
+        foreach (BidiPair pair in Tables.BidiPairTable)
+        {
+            if (pair.Opening == codePoint || pair.Closing == codePoint)
+            {
+                return new BidiMatchedOpeningBracket(
+                    new Rune(pair.Skeleton ?? pair.Opening),
+                    pair.Opening == codePoint);
+            }
+        }
+
+        return null;
+    }
 }

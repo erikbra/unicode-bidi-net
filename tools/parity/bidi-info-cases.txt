@@ -4,3 +4,11 @@ explicit-lre-in-rtl auto 05D0,202A,0061,202C,05D1
 explicit-rlo auto 0061,202E,0062,202C
 isolate-rli auto 0061,2067,05D0,2069,0062
 paragraphs-explicit auto 0061,202B,05D0,202C,000A,05D1
+rtl-european-number auto 05D0,0020,0031,0032
+arabic-number-separator auto 0627,0031,002C,0032
+ltr-neutral-before-rtl auto 0061,0020,05D0
+rtl-neutral-before-ltr auto 05D0,0020,0061
+rtl-es-before-number auto 05D0,002D,0031
+ltr-es-before-number auto 0061,002B,0031
+ltr-bracket-rtl auto 0061,0028,05D0,0029,0062
+rtl-bracket-ltr auto 05D0,0028,0061,0029,05D1
