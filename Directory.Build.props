@@ -13,12 +13,21 @@
     <Company>Unicode.Bidi contributors</Company>
     <PackageProjectUrl>https://github.com/erikbra/unicode-bidi-net</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/erikbra/unicode-bidi-net</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageReleaseNotes>Tracks $(UnicodeBidiNetUpstreamCrate) $(UnicodeBidiNetUpstreamVersion) with Unicode data $(UnicodeBidiNetUnicodeVersion).</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(RepositoryBranch)' == '' and '$(GITHUB_REF_NAME)' != ''">
     <RepositoryBranch>$(GITHUB_REF_NAME)</RepositoryBranch>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' == '' and '$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>

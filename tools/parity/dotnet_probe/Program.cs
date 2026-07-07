@@ -44,6 +44,12 @@ switch (args[0])
         Console.WriteLine(FormatReorderedLines(reorderInfo));
         return 0;
 
+    case "conformance" when args.Length == 3:
+        string conformanceText = ParseUtf16Text(args[1]);
+        BidiInfo conformanceInfo = BidiInfo.New(conformanceText, ParseDefaultLevel(args[2]));
+        Console.WriteLine(FormatConformance(conformanceInfo));
+        return 0;
+
     default:
         Usage();
         return 2;
@@ -56,6 +62,7 @@ static void Usage()
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- bidi-info <utf16-code-units> <auto|ltr|rtl|number>");
     Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- reorder-line <utf16-code-units> <auto|ltr|rtl|number>");
+    Console.Error.WriteLine("  dotnet run --project tools/parity/dotnet_probe -- conformance <utf16-code-units> <auto|ltr|rtl|number>");
 }
 
 static int ParseCodePoint(string value)
@@ -119,4 +126,48 @@ static string FormatReorderedLines(BidiInfo bidiInfo)
 static string FormatUtf16Units(string text)
 {
     return string.Join(",", text.Select(c => ((int)c).ToString("X4", CultureInfo.InvariantCulture)));
+}
+
+static string FormatConformance(BidiInfo bidiInfo)
+{
+    if (bidiInfo.Paragraphs.Count == 0)
+    {
+        return "para=;levels=;reorder=";
+    }
+
+    ParagraphInfo paragraph = bidiInfo.Paragraphs[0];
+    Level[] reorderedLevels = bidiInfo.ReorderedLevels(paragraph, paragraph.Range);
+    InitialInfo.TextScalar[] scalars = InitialInfo.EnumerateScalars(bidiInfo.Text).ToArray();
+
+    string levels = string.Join(" ", scalars.Select(scalar =>
+        Prepare.RemovedByX9(bidiInfo.OriginalClasses[scalar.CodeUnitIndex])
+            ? "x"
+            : reorderedLevels[scalar.CodeUnitIndex].Number().ToString(CultureInfo.InvariantCulture)));
+
+    (_, TextRange[] visualRuns) = bidiInfo.VisualRuns(paragraph, paragraph.Range);
+    List<int> visualOrder = [];
+    Dictionary<int, int> scalarIndexByCodeUnit = scalars
+        .Select((scalar, index) => (scalar.CodeUnitIndex, index))
+        .ToDictionary(item => item.CodeUnitIndex, item => item.index);
+
+    foreach (TextRange run in visualRuns)
+    {
+        IEnumerable<InitialInfo.TextScalar> runScalars = scalars
+            .Where(scalar => scalar.CodeUnitIndex >= run.Start && scalar.CodeUnitIndex < run.End);
+        if (reorderedLevels[run.Start].IsRtl())
+        {
+            runScalars = runScalars.Reverse();
+        }
+
+        foreach (InitialInfo.TextScalar scalar in runScalars)
+        {
+            if (!Prepare.RemovedByX9(bidiInfo.OriginalClasses[scalar.CodeUnitIndex]))
+            {
+                visualOrder.Add(scalarIndexByCodeUnit[scalar.CodeUnitIndex]);
+            }
+        }
+    }
+
+    string reorder = string.Join(" ", visualOrder);
+    return $"para={paragraph.Level.Number()};levels={levels};reorder={reorder}";
 }
