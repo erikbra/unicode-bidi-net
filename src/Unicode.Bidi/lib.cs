@@ -245,6 +245,167 @@ public sealed class InitialInfo
 }
 
 /// <summary>
+/// Bidi information of text treated as a single paragraph.
+/// </summary>
+public sealed class ParagraphBidiInfo
+{
+    private ParagraphBidiInfo(
+        string text,
+        BidiClass[] originalClasses,
+        Level[] levels,
+        Level paragraphLevel,
+        bool isPureLtr)
+    {
+        Text = text;
+        OriginalClasses = originalClasses;
+        Levels = levels;
+        ParagraphLevel = paragraphLevel;
+        IsPureLtr = isPureLtr;
+    }
+
+    /// <summary>
+    /// Gets the original input text.
+    /// </summary>
+    public string Text { get; }
+
+    /// <summary>
+    /// Gets the original bidi class for each UTF-16 code unit in the input text.
+    /// </summary>
+    public IReadOnlyList<BidiClass> OriginalClasses { get; }
+
+    /// <summary>
+    /// Gets the resolved embedding level for each UTF-16 code unit in the input text.
+    /// </summary>
+    public IReadOnlyList<Level> Levels { get; }
+
+    /// <summary>
+    /// Gets the paragraph embedding level.
+    /// </summary>
+    public Level ParagraphLevel { get; }
+
+    /// <summary>
+    /// Gets whether the paragraph can be treated as purely left-to-right.
+    /// </summary>
+    public bool IsPureLtr { get; }
+
+    /// <summary>
+    /// Computes bidi information for text treated as one paragraph.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <param name="defaultParaLevel">The paragraph level to use, or <see langword="null"/> to determine it from text.</param>
+    /// <returns>The resolved single-paragraph bidi information.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    public static ParagraphBidiInfo New(string text, Level? defaultParaLevel = null)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        (BidiClass[] originalClasses, Level paragraphLevel, bool isPureLtr, bool hasIsolateControls) =
+            InitialInfo.ComputeInitialInfo(
+                text,
+                defaultParaLevel,
+                splitParagraphs: false,
+                paragraphs: null,
+                flags: null);
+
+        Level[] levels = [];
+        if (text.Length != 0)
+        {
+            BidiClass[] processingClasses = originalClasses.ToArray();
+            List<Level> resolvedLevels = [];
+            BidiInfo.ComputeBidiInfoForPara(
+                new ParagraphInfo(new TextRange(0, text.Length), paragraphLevel),
+                isPureLtr,
+                hasIsolateControls,
+                text,
+                originalClasses.ToArray(),
+                processingClasses,
+                resolvedLevels);
+            levels = resolvedLevels.ToArray();
+        }
+
+        return new ParagraphBidiInfo(text, originalClasses, levels, paragraphLevel, isPureLtr);
+    }
+
+    /// <summary>
+    /// Computes bidi information for text treated as one paragraph.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <param name="defaultParaLevel">The paragraph level to use, or <see langword="null"/> to determine it from text.</param>
+    /// <returns>The resolved single-paragraph bidi information.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    public static ParagraphBidiInfo Create(string text, Level? defaultParaLevel = null)
+    {
+        return New(text, defaultParaLevel);
+    }
+}
+
+/// <summary>
+/// Lightweight helpers for bidi operations that do not need full level resolution.
+/// </summary>
+public static class Bidi
+{
+    /// <summary>
+    /// Gets the base direction of the first paragraph according to the first strong character outside isolate runs.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <returns>The base direction, or <see cref="Direction.Mixed"/> when no strong character is found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    public static Direction GetBaseDirection(string text)
+    {
+        return GetBaseDirectionImpl(text, useFullText: false);
+    }
+
+    /// <summary>
+    /// Gets the base direction, continuing after neutral paragraphs until a strong character is found.
+    /// </summary>
+    /// <param name="text">The input text.</param>
+    /// <returns>The base direction, or <see cref="Direction.Mixed"/> when no strong character is found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    public static Direction GetBaseDirectionFull(string text)
+    {
+        return GetBaseDirectionImpl(text, useFullText: true);
+    }
+
+    private static Direction GetBaseDirectionImpl(string text, bool useFullText)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        int isolateLevel = 0;
+        foreach (InitialInfo.TextScalar scalar in InitialInfo.EnumerateScalars(text))
+        {
+            switch (CharData.BidiClass(scalar.Rune))
+            {
+                case BidiClass.LRI:
+                case BidiClass.RLI:
+                case BidiClass.FSI:
+                    isolateLevel++;
+                    break;
+
+                case BidiClass.PDI when isolateLevel > 0:
+                    isolateLevel--;
+                    break;
+
+                case BidiClass.L when isolateLevel == 0:
+                    return Direction.Ltr;
+
+                case BidiClass.R when isolateLevel == 0:
+                case BidiClass.AL when isolateLevel == 0:
+                    return Direction.Rtl;
+
+                case BidiClass.B when !useFullText:
+                    return Direction.Mixed;
+
+                case BidiClass.B:
+                    isolateLevel = 0;
+                    break;
+            }
+        }
+
+        return Direction.Mixed;
+    }
+}
+
+/// <summary>
 /// Bidi information of the text.
 /// </summary>
 public sealed class BidiInfo
@@ -549,7 +710,7 @@ public sealed class BidiInfo
             paragraphDiagnostics.ToArray());
     }
 
-    private static void ComputeBidiInfoForPara(
+    internal static void ComputeBidiInfoForPara(
         ParagraphInfo paragraph,
         bool isPureLtr,
         bool hasIsolateControls,

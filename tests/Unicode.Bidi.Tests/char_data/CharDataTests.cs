@@ -20,14 +20,44 @@ public class CharDataTests
     [InlineData('\u0041', BidiClass.L)]
     [InlineData('\u0062', BidiClass.L)]
     [InlineData('\u007F', BidiClass.BN)]
+    public void TestAscii(char c, BidiClass expected)
+    {
+        Assert.Equal(expected, CharData.BidiClass(c));
+    }
+
+    [Theory]
     [InlineData('\u0590', BidiClass.R)]
     [InlineData('\u05D0', BidiClass.R)]
+    [InlineData('\u05D1', BidiClass.R)]
+    [InlineData('\u05FF', BidiClass.R)]
     [InlineData('\u0600', BidiClass.AN)]
     [InlineData('\u0627', BidiClass.AL)]
+    [InlineData('\u07BF', BidiClass.AL)]
+    [InlineData('\u07C0', BidiClass.R)]
+    [InlineData('\u085F', BidiClass.R)]
+    [InlineData('\u0860', BidiClass.AL)]
+    [InlineData('\u0870', BidiClass.AL)]
+    [InlineData('\u089F', BidiClass.NSM)]
+    [InlineData('\u08A0', BidiClass.AL)]
+    [InlineData('\u08FF', BidiClass.NSM)]
     [InlineData('\u20A0', BidiClass.ET)]
+    [InlineData('\u20CF', BidiClass.ET)]
+    [InlineData('\uFB1D', BidiClass.R)]
+    [InlineData('\uFB4F', BidiClass.R)]
+    [InlineData('\uFB50', BidiClass.AL)]
+    [InlineData('\uFDCF', BidiClass.ON)]
+    [InlineData('\uFDF0', BidiClass.AL)]
+    [InlineData('\uFDFF', BidiClass.ON)]
+    [InlineData('\uFE70', BidiClass.AL)]
+    [InlineData('\uFEFE', BidiClass.AL)]
     [InlineData('\uFEFF', BidiClass.BN)]
     [InlineData('\uFDD0', BidiClass.L)]
-    public void BidiClass_MatchesRustInlineTestsForBmpCharacters(char c, BidiClass expected)
+    [InlineData('\uFDD1', BidiClass.L)]
+    [InlineData('\uFDEE', BidiClass.L)]
+    [InlineData('\uFDEF', BidiClass.L)]
+    [InlineData('\uFFFE', BidiClass.L)]
+    [InlineData('\uFFFF', BidiClass.L)]
+    public void TestBmp(char c, BidiClass expected)
     {
         Assert.Equal(expected, CharData.BidiClass(c));
     }
@@ -36,9 +66,26 @@ public class CharDataTests
     [InlineData(0x10800, BidiClass.R)]
     [InlineData(0x10FFF, BidiClass.R)]
     [InlineData(0x1E800, BidiClass.R)]
+    [InlineData(0x1EDFF, BidiClass.R)]
     [InlineData(0x1EE00, BidiClass.AL)]
+    [InlineData(0x1EEFF, BidiClass.AL)]
+    [InlineData(0x1EF00, BidiClass.R)]
+    [InlineData(0x1EFFF, BidiClass.R)]
+    public void TestSmp(int scalar, BidiClass expected)
+    {
+        Assert.Equal(expected, CharData.BidiClass(new Rune(scalar)));
+    }
+
+    [Theory]
     [InlineData(0x30000, BidiClass.L)]
-    public void BidiClass_MatchesRustInlineTestsForSupplementaryScalars(int scalar, BidiClass expected)
+    [InlineData(0x40000, BidiClass.L)]
+    [InlineData(0x50000, BidiClass.L)]
+    [InlineData(0x60000, BidiClass.L)]
+    [InlineData(0x70000, BidiClass.L)]
+    [InlineData(0x80000, BidiClass.L)]
+    [InlineData(0x90000, BidiClass.L)]
+    [InlineData(0xA0000, BidiClass.L)]
+    public void TestUnassignedPlanes(int scalar, BidiClass expected)
     {
         Assert.Equal(expected, CharData.BidiClass(new Rune(scalar)));
     }

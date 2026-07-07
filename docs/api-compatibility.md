@@ -11,6 +11,10 @@ This project tracks Rust `unicode-bidi` `0.3.18`, with .NET APIs shaped around U
 - `InitialInfo.Create` as an idiomatic .NET alias for `InitialInfo.New`.
 - `BidiInfo.New`.
 - `BidiInfo.Create` as an idiomatic .NET alias for `BidiInfo.New`.
+- `ParagraphBidiInfo.New`.
+- `ParagraphBidiInfo.Create` as an idiomatic .NET alias for `ParagraphBidiInfo.New`.
+- `Bidi.GetBaseDirection`.
+- `Bidi.GetBaseDirectionFull`.
 - Explicit, prepare, weak, neutral, implicit, and level resolution stages.
 - `BidiInfo.ReorderedLevels`.
 - `BidiInfo.ReorderedLevelsPerChar`.
@@ -31,7 +35,7 @@ This project tracks Rust `unicode-bidi` `0.3.18`, with .NET APIs shaped around U
 ## Review Decisions
 
 - Keep Rust-style `New` factory names as the traceable primary API.
-- Add `Create` aliases only for `InitialInfo` and `BidiInfo`, where .NET callers naturally enter the library.
-- Defer a single-paragraph convenience type comparable to Rust `ParagraphBidiInfo`; the current `BidiInfo` plus `ParagraphInfo` surface already preserves paragraph metadata without introducing another ownership shape.
+- Add `Create` aliases for `InitialInfo`, `BidiInfo`, and `ParagraphBidiInfo`, where .NET callers naturally enter the library.
+- Include the single-paragraph `ParagraphBidiInfo` API because upstream unit-test parity exercises it directly.
 - Keep `net10.0` for the preview package and revisit broader target frameworks once the consuming PdfBox.Net integration proves the required baseline.
 - Ship XML documentation for the public preview surface.
