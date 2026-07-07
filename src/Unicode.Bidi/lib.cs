@@ -218,6 +218,129 @@ public sealed class BidiInfo
 
     public IReadOnlyList<ParagraphInfo> Paragraphs { get; }
 
+    public bool HasRtl()
+    {
+        return Levels.Any(level => level.IsRtl());
+    }
+
+    public Direction ParagraphDirection(ParagraphInfo paragraph)
+    {
+        return ParaDirection(Levels.Skip(paragraph.Range.Start).Take(paragraph.Range.Length));
+    }
+
+    public Level LevelAt(ParagraphInfo paragraph, int position)
+    {
+        return Levels[paragraph.Range.Start + position];
+    }
+
+    public Level[] ReorderedLevels(ParagraphInfo paragraph, TextRange line)
+    {
+        ValidateLine(line);
+
+        Level[] levels = Levels.ToArray();
+        if (line.IsEmpty)
+        {
+            return levels;
+        }
+
+        BidiClass[] lineClasses = OriginalClasses
+            .Skip(line.Start)
+            .Take(line.Length)
+            .ToArray();
+        Level[] lineLevels = levels
+            .Skip(line.Start)
+            .Take(line.Length)
+            .ToArray();
+
+        ReorderLevels(
+            lineClasses,
+            lineLevels,
+            Text.Substring(line.Start, line.Length),
+            paragraph.Level);
+
+        for (int i = 0; i < lineLevels.Length; i++)
+        {
+            levels[line.Start + i] = lineLevels[i];
+        }
+
+        return levels;
+    }
+
+    public Level[] ReorderedLevelsPerChar(ParagraphInfo paragraph, TextRange line)
+    {
+        Level[] levels = ReorderedLevels(paragraph, line);
+        return InitialInfo.EnumerateScalars(Text)
+            .Select(scalar => levels[scalar.CodeUnitIndex])
+            .ToArray();
+    }
+
+    public string ReorderLine(ParagraphInfo paragraph, TextRange line)
+    {
+        ValidateLine(line);
+        if (line.IsEmpty || !HasRtl(Levels.Skip(line.Start).Take(line.Length)))
+        {
+            return Text.Substring(line.Start, line.Length);
+        }
+
+        (Level[] levels, TextRange[] runs) = VisualRuns(paragraph, line);
+        return ReorderLine(Text, line, levels, runs);
+    }
+
+    public (Level[] Levels, TextRange[] Runs) VisualRuns(ParagraphInfo paragraph, TextRange line)
+    {
+        Level[] levels = ReorderedLevels(paragraph, line);
+        return VisualRunsForLine(levels, line);
+    }
+
+    public static int[] ReorderVisual(IReadOnlyList<Level> levels)
+    {
+        if (levels.Count == 0)
+        {
+            return [];
+        }
+
+        Level minLevel = levels[0];
+        Level maxLevel = levels[0];
+        foreach (Level level in levels)
+        {
+            if (level < minLevel)
+            {
+                minLevel = level;
+            }
+
+            if (level > maxLevel)
+            {
+                maxLevel = level;
+            }
+        }
+
+        int[] result = Enumerable.Range(0, levels.Count).ToArray();
+        if (minLevel == maxLevel && minLevel.IsLtr())
+        {
+            return result;
+        }
+
+        minLevel = minLevel.NewLowestGeRtl();
+        while (minLevel <= maxLevel)
+        {
+            TextRange range = new(0, 0);
+            while (true)
+            {
+                range = NextRange(levels, range.End, maxLevel);
+                Array.Reverse(result, range.Start, range.Length);
+
+                if (range.End >= levels.Count)
+                {
+                    break;
+                }
+            }
+
+            maxLevel = maxLevel.Lower(1);
+        }
+
+        return result;
+    }
+
     public static BidiInfo New(string text, Level? defaultParaLevel = null)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -386,6 +509,251 @@ public sealed class BidiInfo
                 levels[i] = i > 0 ? levels[i - 1] : paraLevel;
             }
         }
+    }
+
+    private void ValidateLine(TextRange line)
+    {
+        if (line.Start < 0 || line.End < line.Start || line.End > Text.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(line));
+        }
+    }
+
+    private static void ReorderLevels(
+        IReadOnlyList<BidiClass> lineClasses,
+        Level[] lineLevels,
+        string lineText,
+        Level paraLevel)
+    {
+        int? resetFrom = 0;
+        int? resetTo = null;
+        Level prevLevel = paraLevel;
+
+        foreach (InitialInfo.TextScalar scalar in InitialInfo.EnumerateScalars(lineText))
+        {
+            int i = scalar.CodeUnitIndex;
+            switch (lineClasses[i])
+            {
+                case BidiClass.B:
+                case BidiClass.S:
+                    resetTo = i + scalar.CodeUnitLength;
+                    resetFrom ??= i;
+                    break;
+
+                case BidiClass.WS:
+                case BidiClass.FSI:
+                case BidiClass.LRI:
+                case BidiClass.RLI:
+                case BidiClass.PDI:
+                    resetFrom ??= i;
+                    break;
+
+                case BidiClass.RLE:
+                case BidiClass.LRE:
+                case BidiClass.RLO:
+                case BidiClass.LRO:
+                case BidiClass.PDF:
+                case BidiClass.BN:
+                    resetFrom ??= i;
+                    for (int j = i; j < i + scalar.CodeUnitLength; j++)
+                    {
+                        lineLevels[j] = prevLevel;
+                    }
+
+                    break;
+
+                default:
+                    resetFrom = null;
+                    break;
+            }
+
+            if (resetFrom.HasValue && resetTo.HasValue)
+            {
+                for (int j = resetFrom.Value; j < resetTo.Value; j++)
+                {
+                    lineLevels[j] = paraLevel;
+                }
+
+                resetFrom = null;
+                resetTo = null;
+            }
+
+            prevLevel = lineLevels[i];
+        }
+
+        if (resetFrom.HasValue)
+        {
+            for (int j = resetFrom.Value; j < lineLevels.Length; j++)
+            {
+                lineLevels[j] = paraLevel;
+            }
+        }
+    }
+
+    private static (Level[] Levels, TextRange[] Runs) VisualRunsForLine(Level[] levels, TextRange line)
+    {
+        if (line.IsEmpty)
+        {
+            return (levels, []);
+        }
+
+        List<TextRange> runs = [];
+        int start = line.Start;
+        Level runLevel = levels[start];
+        Level minLevel = runLevel;
+        Level maxLevel = runLevel;
+
+        for (int i = start + 1; i < line.End; i++)
+        {
+            Level newLevel = levels[i];
+            if (newLevel != runLevel)
+            {
+                runs.Add(new TextRange(start, i));
+                start = i;
+                runLevel = newLevel;
+                if (runLevel < minLevel)
+                {
+                    minLevel = runLevel;
+                }
+
+                if (runLevel > maxLevel)
+                {
+                    maxLevel = runLevel;
+                }
+            }
+        }
+
+        runs.Add(new TextRange(start, line.End));
+        int runCount = runs.Count;
+        minLevel = minLevel.NewLowestGeRtl();
+        while (maxLevel >= minLevel)
+        {
+            int seqStart = 0;
+            while (seqStart < runCount)
+            {
+                if (levels[runs[seqStart].Start] < maxLevel)
+                {
+                    seqStart++;
+                    continue;
+                }
+
+                int seqEnd = seqStart + 1;
+                while (seqEnd < runCount && levels[runs[seqEnd].Start] >= maxLevel)
+                {
+                    seqEnd++;
+                }
+
+                runs.Reverse(seqStart, seqEnd - seqStart);
+                seqStart = seqEnd;
+            }
+
+            maxLevel = maxLevel.Lower(1);
+        }
+
+        return (levels, runs.ToArray());
+    }
+
+    private static string ReorderLine(string text, TextRange line, IReadOnlyList<Level> levels, IReadOnlyList<TextRange> runs)
+    {
+        if (runs.All(run => levels[run.Start].IsLtr()))
+        {
+            return text.Substring(line.Start, line.Length);
+        }
+
+        StringBuilder result = new(line.Length);
+        foreach (TextRange run in runs)
+        {
+            if (levels[run.Start].IsRtl())
+            {
+                AppendReversedScalars(result, text, run);
+            }
+            else
+            {
+                result.Append(text, run.Start, run.Length);
+            }
+        }
+
+        return result.ToString();
+    }
+
+    private static void AppendReversedScalars(StringBuilder result, string text, TextRange range)
+    {
+        for (int i = range.End; i > range.Start;)
+        {
+            char previous = text[i - 1];
+            if (char.IsLowSurrogate(previous)
+                && i - 2 >= range.Start
+                && char.IsHighSurrogate(text[i - 2]))
+            {
+                result.Append(text[i - 2]);
+                result.Append(previous);
+                i -= 2;
+            }
+            else
+            {
+                result.Append(previous);
+                i--;
+            }
+        }
+    }
+
+    private static TextRange NextRange(IReadOnlyList<Level> levels, int startIndex, Level maxLevel)
+    {
+        if (levels.Count == 0 || startIndex >= levels.Count)
+        {
+            return new TextRange(startIndex, startIndex);
+        }
+
+        while (startIndex < levels.Count && levels[startIndex] < maxLevel)
+        {
+            startIndex++;
+        }
+
+        if (startIndex >= levels.Count)
+        {
+            return new TextRange(startIndex, startIndex);
+        }
+
+        int endIndex = startIndex + 1;
+        while (endIndex < levels.Count && levels[endIndex] >= maxLevel)
+        {
+            endIndex++;
+        }
+
+        return new TextRange(startIndex, endIndex);
+    }
+
+    private static Direction ParaDirection(IEnumerable<Level> levels)
+    {
+        bool ltr = false;
+        bool rtl = false;
+        foreach (Level level in levels)
+        {
+            if (level.IsLtr())
+            {
+                ltr = true;
+                if (rtl)
+                {
+                    return Direction.Mixed;
+                }
+            }
+
+            if (level.IsRtl())
+            {
+                rtl = true;
+                if (ltr)
+                {
+                    return Direction.Mixed;
+                }
+            }
+        }
+
+        return ltr ? Direction.Ltr : Direction.Rtl;
+    }
+
+    private static bool HasRtl(IEnumerable<Level> levels)
+    {
+        return levels.Any(level => level.IsRtl());
     }
 }
 

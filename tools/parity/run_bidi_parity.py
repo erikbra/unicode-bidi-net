@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES = ROOT / "tools/parity/bidi-class-cases.txt"
 DEFAULT_INITIAL_CASES = ROOT / "tools/parity/initial-info-cases.txt"
 DEFAULT_BIDI_INFO_CASES = ROOT / "tools/parity/bidi-info-cases.txt"
+DEFAULT_REORDER_LINE_CASES = ROOT / "tools/parity/reorder-line-cases.txt"
 DOTNET_PROBE = ROOT / "tools/parity/dotnet_probe/UnicodeBidiDotnetProbe.csproj"
 RUST_PROBE = ROOT / "tools/parity/rust_probe/Cargo.toml"
 
@@ -23,6 +24,7 @@ def main() -> int:
     parser.add_argument("--bidi-class-cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--initial-info-cases", type=Path, default=DEFAULT_INITIAL_CASES)
     parser.add_argument("--bidi-info-cases", type=Path, default=DEFAULT_BIDI_INFO_CASES)
+    parser.add_argument("--reorder-line-cases", type=Path, default=DEFAULT_REORDER_LINE_CASES)
     parser.add_argument("--out-dir", type=Path, default=ROOT / "artifacts/bidi-parity")
     args = parser.parse_args()
 
@@ -33,6 +35,7 @@ def main() -> int:
     bidi_class_cases = read_bidi_class_cases(args.bidi_class_cases)
     initial_info_cases = read_initial_info_cases(args.initial_info_cases)
     bidi_info_cases = read_initial_info_cases(args.bidi_info_cases)
+    reorder_line_cases = read_initial_info_cases(args.reorder_line_cases)
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     subprocess.run(
@@ -144,8 +147,45 @@ def main() -> int:
         if not ok:
             failures.append(row)
 
+    for case in reorder_line_cases:
+        rust = run_probe(
+            [
+                "cargo",
+                "run",
+                "--quiet",
+                "--manifest-path",
+                str(RUST_PROBE),
+                "--",
+                "reorder-line",
+                case["units"],
+                case["defaultLevel"],
+            ],
+            env,
+        )
+        dotnet = run_probe(
+            [
+                "dotnet",
+                "run",
+                "--project",
+                str(DOTNET_PROBE),
+                "--configuration",
+                "Release",
+                "--no-build",
+                "--",
+                "reorder-line",
+                case["units"],
+                case["defaultLevel"],
+            ],
+            env,
+        )
+        ok = rust == dotnet
+        row = {"kind": "reorder-line", **case, "rust": rust, "dotnet": dotnet, "ok": ok}
+        rows.append(row)
+        if not ok:
+            failures.append(row)
+
     (args.out_dir / "results.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-    total = len(bidi_class_cases) + len(initial_info_cases) + len(bidi_info_cases)
+    total = len(bidi_class_cases) + len(initial_info_cases) + len(bidi_info_cases) + len(reorder_line_cases)
     summary = f"bidi parity: {total - len(failures)}/{total} matched"
     (args.out_dir / "summary.md").write_text(f"# Bidi Parity\n\n{summary}\n", encoding="utf-8")
     print(summary)

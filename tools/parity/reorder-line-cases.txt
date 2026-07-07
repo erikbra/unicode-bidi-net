@@ -1,0 +1,9 @@
+# name default-level utf16-code-units
+ascii-paragraphs auto 0061,0062,0063,000A,0064,0065,0066,000A,0067,0068,0069
+ltr-then-arabic auto 0061,0062,0063,000A,0627,0628,062C
+arabic-then-ltr auto 0627,0628,062C,000A,0061,0062,0063
+english-hebrew auto 0061,0062,0063,0020,05D0,05D1,05D2
+numbers-hebrew auto 0031,0032,0033,0020,05D0,05D1,05D2
+hebrew-neutral-hebrew auto 05D0,05D1,05D2,003F,0020,05D0,05D1,05D2
+hebrew-brackets auto 05D0,0028,05D1,0029,05D2,002E
+isolate-punctuation auto 0061,0062,0063,2067,002E,002D,2069,0067,0068,0069

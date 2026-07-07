@@ -6,11 +6,13 @@ fn main() {
         Some("bidi-class") if args.len() == 3 => print_bidi_class(&args[2]),
         Some("initial-info") if args.len() == 4 => print_initial_info(&args[2], &args[3]),
         Some("bidi-info") if args.len() == 4 => print_bidi_info(&args[2], &args[3]),
+        Some("reorder-line") if args.len() == 4 => print_reorder_line(&args[2], &args[3]),
         _ => {
             eprintln!("usage:");
             eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- bidi-class <codepoint>");
             eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- initial-info <utf16-code-units> <auto|ltr|rtl|number>");
             eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- bidi-info <utf16-code-units> <auto|ltr|rtl|number>");
+            eprintln!("  cargo run --manifest-path tools/parity/rust_probe/Cargo.toml -- reorder-line <utf16-code-units> <auto|ltr|rtl|number>");
             std::process::exit(2);
         }
     }
@@ -61,6 +63,22 @@ fn print_bidi_info(units: &str, default_level: &str) {
     println!("{};levels={}", format_initial_info(&initial), levels);
 }
 
+fn print_reorder_line(units: &str, default_level: &str) {
+    let text = parse_utf16_units(units);
+    let bidi = unicode_bidi::utf16::BidiInfo::new(&text, parse_default_level(default_level));
+    let lines = bidi
+        .paragraphs
+        .iter()
+        .map(|paragraph| {
+            let reordered = bidi.reorder_line(paragraph, paragraph.range.clone());
+            format_utf16_units(&reordered)
+        })
+        .collect::<Vec<_>>()
+        .join("|");
+
+    println!("lines={}", lines);
+}
+
 fn format_initial_info(initial: &unicode_bidi::utf16::InitialInfo) -> String {
     let classes = initial
         .original_classes
@@ -83,6 +101,14 @@ fn format_initial_info(initial: &unicode_bidi::utf16::InitialInfo) -> String {
         .join(",");
 
     format!("classes={};paragraphs={}", classes, paragraphs)
+}
+
+fn format_utf16_units(units: &[u16]) -> String {
+    units
+        .iter()
+        .map(|unit| format!("{:04X}", unit))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn parse_utf16_units(value: &str) -> Vec<u16> {
