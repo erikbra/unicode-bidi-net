@@ -82,12 +82,12 @@ See `docs/performance.md` for the measured .NET/Rust results and lookup-strategy
 
 ## Packaging
 
-Preview packages can be produced locally with:
+NuGet packages can be produced locally with:
 
 ```bash
 dotnet pack src/Unicode.Bidi/Unicode.Bidi.csproj --configuration Release --output artifacts/packages
 ```
 
-Publishing to nuget.org is done through the manual **Publish to NuGet** GitHub Actions workflow. See `docs/publishing.md` for the required NuGet Trusted Publishing policy and publish inputs.
+Publishing to nuget.org is done through the manual **Publish to NuGet** GitHub Actions workflow. A successful publication also creates a matching GitHub Release with the package artifacts attached. See `docs/publishing.md` for the required NuGet Trusted Publishing policy and publish inputs.
 
 See `docs/api-compatibility.md` and `docs/conformance.md` for the current parity notes and conformance workflow.

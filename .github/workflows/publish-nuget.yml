@@ -6,7 +6,7 @@ on:
       package_version:
         description: "NuGet package version to pack or publish"
         required: true
-        default: "0.3.18-preview"
+        default: "0.3.18"
       publish_to_nuget:
         description: "Push the generated package to nuget.org"
         required: true
@@ -306,4 +306,78 @@ jobs:
             if [ -n "$SNUPKG" ]; then
               echo "- Symbol package pushed: \`$SNUPKG\`"
             fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: [pack, publish]
+    if: ${{ always() && inputs.publish_to_nuget && needs.pack.result == 'success' && needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: nuget-packages-${{ inputs.package_version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/packages
+
+      - name: Create or update GitHub release
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          packages=("$PACKAGE_OUTPUT"/*.nupkg)
+          symbol_packages=("$PACKAGE_OUTPUT"/*.snupkg)
+
+          if [ "${#packages[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one .nupkg in $PACKAGE_OUTPUT, found ${#packages[@]}."
+            exit 1
+          fi
+
+          if [ "${#symbol_packages[@]}" -gt 1 ]; then
+            echo "::error::Expected at most one .snupkg in $PACKAGE_OUTPUT, found ${#symbol_packages[@]}."
+            exit 1
+          fi
+
+          tag="v$PACKAGE_VERSION"
+          assets=("${packages[0]}")
+          if [ "${#symbol_packages[@]}" -eq 1 ]; then
+            assets+=("${symbol_packages[0]}")
+          fi
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$tag" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$PACKAGE_ID $PACKAGE_VERSION" \
+              --generate-notes
+          fi
+
+          release_url="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url --jq .url)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "url=$release_url" >> "$GITHUB_OUTPUT"
+
+      - name: Write release summary
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_URL: ${{ steps.release.outputs.url }}
+        run: |
+          {
+            echo "## GitHub release"
+            echo
+            echo "- Package: \`$PACKAGE_ID\`"
+            echo "- Version: \`$PACKAGE_VERSION\`"
+            echo "- Tag: \`$RELEASE_TAG\`"
+            echo "- Release: $RELEASE_URL"
           } >> "$GITHUB_STEP_SUMMARY"
