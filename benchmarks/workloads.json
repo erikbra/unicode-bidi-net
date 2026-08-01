@@ -1,0 +1,26 @@
+{
+  "_copyright": "Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).",
+  "_rustSourcePaths": "src/char_data/mod.rs; src/lib.rs; src/utf16.rs",
+  "_rustVersion": "0.3.18",
+  "bidiClassCodePoints": [
+    65,
+    1488,
+    1575,
+    1632,
+    8234,
+    8238,
+    8294,
+    126464,
+    196608,
+    8364,
+    769,
+    32,
+    10,
+    128512,
+    1114111,
+    1424
+  ],
+  "ltrFragment": "The quick brown fox jumps over the lazy dog. ",
+  "mixedFragment": "abc \u05d0\u05d1\u05d2 123 DEF \u0645\u0631\u062d\u0628\u0627 xyz \u05e9\u05dc\u05d5\u05dd 456 ",
+  "repeatCount": 8
+}

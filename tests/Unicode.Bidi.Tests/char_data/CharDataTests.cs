@@ -8,6 +8,7 @@
  */
 
 using System.Text;
+using Unicode.Bidi.char_data;
 
 namespace Unicode.Bidi.Tests.char_data;
 
@@ -93,5 +94,36 @@ public class CharDataTests
     public void UnicodeVersion_TracksUpstreamCrateData()
     {
         Assert.Equal((16, 0, 0), CharData.UnicodeVersion);
+    }
+
+    [Fact]
+    public void BidiClass_MatchesGeneratedRangesForEveryUnicodeScalar()
+    {
+        Assert.All(Enum.GetValues<BidiClass>(), value => Assert.InRange((int)value, 0, byte.MaxValue));
+
+        int rangeIndex = 0;
+        for (int scalar = 0; scalar <= 0x10FFFF; scalar++)
+        {
+            if (scalar is >= 0xD800 and <= 0xDFFF)
+            {
+                continue;
+            }
+
+            while (rangeIndex < Tables.BidiClassTable.Length
+                && scalar > Tables.BidiClassTable[rangeIndex].Hi)
+            {
+                rangeIndex++;
+            }
+
+            BidiClass expected = rangeIndex < Tables.BidiClassTable.Length
+                && scalar >= Tables.BidiClassTable[rangeIndex].Lo
+                    ? Tables.BidiClassTable[rangeIndex].Class
+                    : BidiClass.L;
+            BidiClass actual = CharData.BidiClass(new Rune(scalar));
+            if (actual != expected)
+            {
+                Assert.Fail($"U+{scalar:X} expected {expected}, but got {actual}.");
+            }
+        }
     }
 }

@@ -9,4 +9,5 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Unicode.Bidi.Tests")]
+[assembly: InternalsVisibleTo("Unicode.Bidi.Benchmarks")]
 [assembly: InternalsVisibleTo("UnicodeBidiDotnetProbe")]

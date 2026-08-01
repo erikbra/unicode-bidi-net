@@ -1,0 +1,29 @@
+<!--
+  Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).
+  UNICODE_BIDI_RUST_SOURCE_PATH: src/char_data/mod.rs; src/lib.rs; src/utf16.rs
+  UNICODE_BIDI_RUST_VERSION: 0.3.18
+  PORT_MODE: infrastructure
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unicode.Bidi\Unicode.Bidi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\workloads.json" Link="workloads.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

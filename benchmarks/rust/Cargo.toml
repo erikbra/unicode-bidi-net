@@ -1,0 +1,20 @@
+# Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).
+# UNICODE_BIDI_RUST_SOURCE_PATH: src/char_data/mod.rs; src/lib.rs; src/utf16.rs
+# UNICODE_BIDI_RUST_VERSION: 0.3.18
+# PORT_MODE: infrastructure
+
+[package]
+name = "unicode-bidi-rust-benchmarks"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dev-dependencies]
+criterion = "=0.8.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+unicode-bidi = "=0.3.18"
+
+[[bench]]
+name = "unicode_bidi"
+harness = false

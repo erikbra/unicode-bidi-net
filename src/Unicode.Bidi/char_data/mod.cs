@@ -52,6 +52,11 @@ public static class CharData
     public static BidiClass BidiClass(Rune rune)
     {
         int codePoint = rune.Value;
+        if (codePoint <= char.MaxValue)
+        {
+            return (BidiClass)BmpLookup.Classes[codePoint];
+        }
+
         int lo = 0;
         int hi = Tables.BidiClassTable.Length - 1;
 
@@ -76,6 +81,30 @@ public static class CharData
 
         // UCD/extracted/DerivedBidiClass.txt: all unlisted code points default to L.
         return global::Unicode.Bidi.BidiClass.L;
+    }
+
+    private static byte[] CreateBmpBidiClasses()
+    {
+        byte[] classes = new byte[char.MaxValue + 1];
+        classes.AsSpan().Fill((byte)global::Unicode.Bidi.BidiClass.L);
+        foreach (BidiClassRange range in Tables.BidiClassTable)
+        {
+            if (range.Lo > char.MaxValue)
+            {
+                break;
+            }
+
+            int end = Math.Min(range.Hi, char.MaxValue);
+            classes.AsSpan(range.Lo, end - range.Lo + 1).Fill((byte)range.Class);
+        }
+
+        return classes;
+    }
+
+    private static class BmpLookup
+    {
+        // Most text stays in the BMP. A compact byte table avoids a binary search per scalar.
+        internal static readonly byte[] Classes = CreateBmpBidiClasses();
     }
 
     /// <summary>

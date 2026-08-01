@@ -1,0 +1,59 @@
+# Copyright (c) 2006 Erik A. Brandstadmoen (C#/.NET port modifications/adaptations).
+# UNICODE_BIDI_RUST_SOURCE_PATH: src/char_data/mod.rs; src/lib.rs; src/utf16.rs
+# UNICODE_BIDI_RUST_VERSION: 0.3.18
+# PORT_MODE: infrastructure
+
+name: Performance benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: "Use short runs to validate the harness"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run comparison
+        shell: bash
+        run: |
+          args=()
+          if [[ "${{ inputs.quick }}" == "true" ]]; then
+            args+=(--quick)
+          fi
+          python3 benchmarks/run_comparison.py "${args[@]}"
+
+      - name: Publish summary
+        if: ${{ always() }}
+        run: |
+          if [[ -f artifacts/benchmarks/summary.md ]]; then
+            cat artifacts/benchmarks/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Benchmark summary was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-benchmarks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/benchmarks
