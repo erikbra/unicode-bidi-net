@@ -68,6 +68,18 @@ python3 tools/conformance/run_unicode_bidi_conformance.py \
 
 Use `--full` for a full local/provisioned run. GitHub Actions also provides a manual **Unicode Conformance** workflow and a weekly full-corpus ratchet.
 
+## Performance
+
+The repository contains a BenchmarkDotNet and Criterion comparison harness:
+
+```bash
+python3 benchmarks/run_comparison.py
+```
+
+Use `--quick` for a short harness check. The manual **Performance benchmarks** GitHub Actions
+workflow runs the same command and uploads both native reports plus the normalized comparison.
+See `docs/performance.md` for the measured .NET/Rust results and lookup-strategy analysis.
+
 ## Packaging
 
 Preview packages can be produced locally with:
