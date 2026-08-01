@@ -5,7 +5,6 @@
     <UnicodeBidiNetUnicodeVersion Condition="'$(UnicodeBidiNetUnicodeVersion)' == ''">16.0.0</UnicodeBidiNetUnicodeVersion>
 
     <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.3.18</VersionPrefix>
-    <VersionSuffix Condition="'$(VersionSuffix)' == ''">preview</VersionSuffix>
     <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">0.3.18.0</AssemblyVersion>
     <FileVersion Condition="'$(FileVersion)' == ''">0.3.18.0</FileVersion>
 
