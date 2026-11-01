@@ -16,7 +16,7 @@ intentional differences from the old reference data, not parity exclusions.
 The curated Rust parity suite checks shared behavior. Unicode's current data and
 full conformance corpus define the character-data contract. Canonically equivalent
 brackets, such as U+2329 and U+3008, continue to share an opening bracket identity
-under UAX #9 BD16.
+under UAX #9 BD16. The current UCD also adds the U+2E62/U+2E63 bracket pair.
 
 ## Updating Unicode data
 

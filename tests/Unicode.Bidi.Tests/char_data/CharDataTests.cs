@@ -118,6 +118,14 @@ public class CharDataTests
         Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x3008), false), CharData.BidiMatchedOpeningBracket(new Rune(0x3009)));
     }
 
+    [Theory]
+    [InlineData(0x2E62, true)]
+    [InlineData(0x2E63, false)]
+    public void BidiMatchedOpeningBracket_IncludesCurrentUcdPairs(int scalar, bool isOpen)
+    {
+        Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x2E62), isOpen), CharData.BidiMatchedOpeningBracket(new Rune(scalar)));
+    }
+
     [Fact]
     public void BidiClass_MatchesGeneratedRangesForEveryUnicodeScalar()
     {

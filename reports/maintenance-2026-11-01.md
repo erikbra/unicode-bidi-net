@@ -29,7 +29,7 @@ Environment: macOS arm64, .NET SDK 10.0.401, runtime 10.0.12; repo-local Rust st
 | --- | --- |
 | `dotnet restore UnicodeBidiNet.slnx --force --no-http-cache` | Passed, no audit warnings |
 | `dotnet build UnicodeBidiNet.slnx --configuration Release --no-restore --nologo` | Passed, 0 warnings, 0 errors |
-| `dotnet test UnicodeBidiNet.slnx --configuration Release --no-build --nologo --collect:'XPlat Code Coverage'` | 169 passed, 0 failed, 0 skipped; coverage artifact produced |
+| `dotnet test UnicodeBidiNet.slnx --configuration Release --no-build --nologo --collect:'XPlat Code Coverage'` | 171 passed, 0 failed, 0 skipped; coverage artifact produced |
 | `python3 -m unittest discover -s tools -p 'test_*.py' -v` | 5 passed |
 | `python3 tools/parity/run_bidi_parity.py --out-dir artifacts/bidi-parity-maintenance` | 44/44 matched Rust 0.3.18 |
 | Full Unicode 18 conformance, both suites, zero-failure ratchet | 861,948/861,948 matched |
