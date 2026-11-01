@@ -25,7 +25,7 @@ Run **Actions** > **Publish to NuGet** from the `main` branch with `publish_to_n
 
 Run the workflow from `main` with:
 
-- `package_version`: the version to publish, for example `0.3.18`.
+- `package_version`: the version to publish, for example `0.4.0`. Package versions now advance independently of the Rust algorithm baseline.
 - `publish_to_nuget`: `true`.
 - `confirm_package_id`: `Unicode.Bidi`.
 - `run_full_conformance`: keep `true` unless the full conformance workflow has already passed for the same commit.

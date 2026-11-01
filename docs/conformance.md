@@ -1,7 +1,7 @@
 # Unicode Bidi Conformance
 
 The curated parity harness compares selected behavior against Rust `unicode-bidi` `0.3.18` on every PR.
-The larger Unicode conformance harness uses Unicode 16.0.0 test data and is intended for local or manual CI runs.
+The larger Unicode conformance harness uses Unicode 18.0.0 test data. Its version comes from `UnicodeBidiNetUnicodeVersion` in `Directory.Build.props`, shared with the character-data generator and package metadata.
 
 ## Fetch Data
 
@@ -9,7 +9,7 @@ The larger Unicode conformance harness uses Unicode 16.0.0 test data and is inte
 python3 tools/conformance/fetch_unicode_bidi_tests.py
 ```
 
-This downloads these files to `artifacts/unicode-16.0.0/`:
+This downloads these files to `artifacts/unicode-18.0.0/`:
 
 - `BidiTest.txt`
 - `BidiCharacterTest.txt`
@@ -46,8 +46,9 @@ The runner emits:
 
 ## GitHub Actions
 
-The regular CI workflow compiles the conformance scripts but keeps PRs on the curated parity suite.
-The **Unicode Conformance** workflow downloads Unicode data and runs either a bounded sample or the full selected corpus.
-It can be started manually, and it also runs the full `both` corpus weekly on the default branch.
+The regular CI workflow runs the curated Rust parity suite and the Python generator unit tests.
+The **Unicode Conformance** workflow verifies that the checked-in tables can be regenerated from the official UCD files and runs the full `both` corpus on pull requests, pushes to `main`, and weekly on the default branch. Manual runs can select a bounded sample or the full selected corpus.
 
-The scheduled full `both` run uses `tools/conformance/full-ratchet-baseline.json`, which currently requires all 861,948 Unicode 16.0.0 cases and zero failures.
+The full `both` run uses `tools/conformance/full-ratchet-baseline.json`, which currently requires all 861,948 Unicode 18.0.0 cases and zero failures.
+
+Unicode 18 character data intentionally differs from the Rust reference's Unicode 16 data. Curated Rust parity remains a check of shared behavior, while the UCD and its conformance corpus define the current character-data contract. See [maintenance](maintenance.md).

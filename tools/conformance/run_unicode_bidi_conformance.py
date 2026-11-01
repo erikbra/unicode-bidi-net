@@ -11,9 +11,10 @@ from dataclasses import dataclass
 from itertools import chain, islice
 from pathlib import Path
 
+from fetch_unicode_bidi_tests import UNICODE_VERSION
+
 
 ROOT = Path(__file__).resolve().parents[2]
-UNICODE_VERSION = "16.0.0"
 DEFAULT_DATA_DIR = ROOT / f"artifacts/unicode-{UNICODE_VERSION}"
 DOTNET_PROBE = ROOT / "tools/parity/dotnet_probe/UnicodeBidiDotnetProbe.csproj"
 DOTNET_PROBE_ASSEMBLY = ROOT / "tools/parity/dotnet_probe/bin/Release/net10.0/UnicodeBidiDotnetProbe.dll"
@@ -145,6 +146,10 @@ def ensure_data_files(data_dir: Path) -> None:
             f"Missing Unicode conformance data in {data_dir}: {', '.join(missing)}. "
             "Run tools/conformance/fetch_unicode_bidi_tests.py first."
         )
+    for name in ("BidiTest.txt", "BidiCharacterTest.txt"):
+        with (data_dir / name).open(encoding="utf-8") as source:
+            if f"{Path(name).stem}-{UNICODE_VERSION}.txt" not in source.readline():
+                raise SystemExit(f"{data_dir / name} is not Unicode {UNICODE_VERSION} conformance data.")
 
 
 def load_cases(data_dir: Path, suite: str):

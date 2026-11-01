@@ -2,11 +2,15 @@
   <PropertyGroup>
     <UnicodeBidiNetUpstreamCrate Condition="'$(UnicodeBidiNetUpstreamCrate)' == ''">unicode-bidi</UnicodeBidiNetUpstreamCrate>
     <UnicodeBidiNetUpstreamVersion Condition="'$(UnicodeBidiNetUpstreamVersion)' == ''">0.3.18</UnicodeBidiNetUpstreamVersion>
-    <UnicodeBidiNetUnicodeVersion Condition="'$(UnicodeBidiNetUnicodeVersion)' == ''">16.0.0</UnicodeBidiNetUnicodeVersion>
+    <UnicodeBidiNetUnicodeVersion Condition="'$(UnicodeBidiNetUnicodeVersion)' == ''">18.0.0</UnicodeBidiNetUnicodeVersion>
 
-    <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.3.18</VersionPrefix>
-    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">0.3.18.0</AssemblyVersion>
-    <FileVersion Condition="'$(FileVersion)' == ''">0.3.18.0</FileVersion>
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.4.0</VersionPrefix>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">0.4.0.0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">0.4.0.0</FileVersion>
+
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1900;NU1901;NU1902;NU1903;NU1904;NU1905</WarningsAsErrors>
 
     <Authors>Erik A. Brandstadmoen; unicode-bidi contributors; Unicode.Bidi contributors</Authors>
     <Company>Erik A. Brandstadmoen</Company>
@@ -20,7 +24,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReleaseNotes>Tracks $(UnicodeBidiNetUpstreamCrate) $(UnicodeBidiNetUpstreamVersion) with Unicode data $(UnicodeBidiNetUnicodeVersion).</PackageReleaseNotes>
+    <PackageReleaseNotes>Algorithm ported from $(UnicodeBidiNetUpstreamCrate) $(UnicodeBidiNetUpstreamVersion); Unicode data $(UnicodeBidiNetUnicodeVersion) generated directly from the Unicode Character Database.</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(RepositoryBranch)' == '' and '$(GITHUB_REF_NAME)' != ''">

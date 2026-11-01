@@ -51,12 +51,13 @@ public class CharDataTests
     [InlineData('\uFE70', BidiClass.AL)]
     [InlineData('\uFEFE', BidiClass.AL)]
     [InlineData('\uFEFF', BidiClass.BN)]
-    [InlineData('\uFDD0', BidiClass.L)]
-    [InlineData('\uFDD1', BidiClass.L)]
-    [InlineData('\uFDEE', BidiClass.L)]
-    [InlineData('\uFDEF', BidiClass.L)]
-    [InlineData('\uFFFE', BidiClass.L)]
-    [InlineData('\uFFFF', BidiClass.L)]
+    // UCD DerivedBidiClass explicitly assigns BN to noncharacters.
+    [InlineData('\uFDD0', BidiClass.BN)]
+    [InlineData('\uFDD1', BidiClass.BN)]
+    [InlineData('\uFDEE', BidiClass.BN)]
+    [InlineData('\uFDEF', BidiClass.BN)]
+    [InlineData('\uFFFE', BidiClass.BN)]
+    [InlineData('\uFFFF', BidiClass.BN)]
     public void TestBmp(char c, BidiClass expected)
     {
         Assert.Equal(expected, CharData.BidiClass(c));
@@ -91,9 +92,38 @@ public class CharDataTests
     }
 
     [Fact]
-    public void UnicodeVersion_TracksUpstreamCrateData()
+    public void UnicodeVersion_TracksUnicodeCharacterDatabase()
     {
-        Assert.Equal((16, 0, 0), CharData.UnicodeVersion);
+        Assert.Equal((18, 0, 0), CharData.UnicodeVersion);
+    }
+
+    [Theory]
+    [InlineData(0x05C8, BidiClass.NSM)] // Hebrew combining point.
+    [InlineData(0x088F, BidiClass.AL)] // Arabic letter.
+    [InlineData(0x10ECB, BidiClass.NSM)] // Supplementary Arabic combining mark.
+    [InlineData(0x086B, BidiClass.AL)] // Unassigned: regional @missing overrides default L.
+    [InlineData(0x10EC0, BidiClass.AL)] // Supplementary regional @missing.
+    [InlineData(0x10FFFF, BidiClass.BN)] // Supplementary noncharacter.
+    public void BidiClass_UsesCurrentUcdAssignmentsAndDefaults(int scalar, BidiClass expected)
+    {
+        Assert.Equal(expected, CharData.BidiClass(new Rune(scalar)));
+    }
+
+    [Fact]
+    public void BidiMatchedOpeningBracket_RecognizesCanonicalEquivalents()
+    {
+        Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x3008), true), CharData.BidiMatchedOpeningBracket(new Rune(0x2329)));
+        Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x3008), false), CharData.BidiMatchedOpeningBracket(new Rune(0x232A)));
+        Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x3008), true), CharData.BidiMatchedOpeningBracket(new Rune(0x3008)));
+        Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x3008), false), CharData.BidiMatchedOpeningBracket(new Rune(0x3009)));
+    }
+
+    [Theory]
+    [InlineData(0x2E62, true)]
+    [InlineData(0x2E63, false)]
+    public void BidiMatchedOpeningBracket_IncludesCurrentUcdPairs(int scalar, bool isOpen)
+    {
+        Assert.Equal(new BidiMatchedOpeningBracket(new Rune(0x2E62), isOpen), CharData.BidiMatchedOpeningBracket(new Rune(scalar)));
     }
 
     [Fact]
