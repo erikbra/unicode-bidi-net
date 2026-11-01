@@ -1,6 +1,8 @@
 # Unicode.Bidi
 
-.NET port of Rust [`unicode-bidi`](https://crates.io/crates/unicode-bidi/0.3.18), tracking crate version `0.3.18` and Unicode data `16.0.0`.
+.NET port of Rust [`unicode-bidi`](https://crates.io/crates/unicode-bidi/0.3.18). The algorithm tracks crate version `0.3.18`; character data tracks Unicode `18.0.0` directly from the Unicode Character Database.
+
+From version `0.4.0`, package versions advance independently of the Rust crate. Updating character data can change bidi classification and text ordering; see [maintenance](docs/maintenance.md) for compatibility notes and the update procedure.
 
 The port intentionally keeps source organization close to the Rust crate so individual files can be compared as the implementation grows:
 
@@ -56,7 +58,7 @@ python3 tools/parity/run_bidi_parity.py --out-dir artifacts/bidi-parity
 
 ## Unicode Conformance
 
-The larger Unicode 16.0.0 conformance files are downloaded on demand into `artifacts/`:
+The larger Unicode 18.0.0 conformance files are downloaded on demand into `artifacts/`:
 
 ```bash
 python3 tools/conformance/fetch_unicode_bidi_tests.py
@@ -66,7 +68,7 @@ python3 tools/conformance/run_unicode_bidi_conformance.py \
   --fail-on-regression
 ```
 
-Use `--full` for a full local/provisioned run. GitHub Actions also provides a manual **Unicode Conformance** workflow and a weekly full-corpus ratchet.
+Use `--full` for a full local/provisioned run. GitHub Actions runs the full corpus on pull requests, pushes to `main`, and weekly, and also provides a manual **Unicode Conformance** workflow.
 
 ## Performance
 

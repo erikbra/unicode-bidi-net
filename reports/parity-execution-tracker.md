@@ -1,18 +1,20 @@
 # Unicode.Bidi Parity Execution Tracker
 
-Last updated: 2026-07-07
+Last updated: 2026-11-01
 
 ## Target
 
-The preview parity target is Rust `unicode-bidi` `0.3.18` using Unicode data `16.0.0`.
+The algorithm parity target is Rust `unicode-bidi` `0.3.18`. The package uses Unicode
+`18.0.0` character data directly from the UCD; intentional differences from Rust's
+Unicode `16.0.0` data are documented in `docs/maintenance.md`.
 
 ## Current Status
 
 - Core UBA stages through L2 are ported.
 - Curated Rust parity harness is part of CI.
-- Unicode conformance data is fetched on demand and run through bounded PR-adjacent checks plus a scheduled full ratchet workflow.
+- Unicode conformance data is fetched on demand; the full ratchet runs on pull requests, pushes to main, and weekly.
 - Upstream Rust unit-test parity is tracked in `reports/upstream-unit-test-parity.md`.
-- Package metadata is ready for preview NuGet packing.
+- Package metadata is prepared for `0.4.0` NuGet packing; publication is manual.
 
 ## Baselines
 

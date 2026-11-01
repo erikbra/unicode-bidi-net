@@ -2,6 +2,11 @@
 
 Last updated: 2026-07-07
 
+Maintenance note (2026-11-01): from package 0.4.0, character data follows Unicode
+18.0.0 directly. `CharDataTests.TestBmp` intentionally expects the UCD's `BN` for
+noncharacters instead of Rust 0.3.18's `L`. See `docs/maintenance.md`; algorithm
+coverage below remains based on the original port.
+
 Target: Rust `unicode-bidi` `0.3.18` from `artifacts/upstream/unicode-bidi-0.3.18`.
 
 ## Ported Unit Tests

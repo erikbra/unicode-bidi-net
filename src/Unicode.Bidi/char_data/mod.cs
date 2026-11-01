@@ -26,7 +26,7 @@ public static class CharData
     /// <summary>
     /// Gets the Unicode Character Database version used by this package.
     /// </summary>
-    public static (int Major, int Minor, int Patch) UnicodeVersion => (16, 0, 0);
+    public static (int Major, int Minor, int Patch) UnicodeVersion => Tables.UnicodeVersion;
 
     /// <summary>
     /// Looks up the Unicode Bidi_Class value for a BMP character.

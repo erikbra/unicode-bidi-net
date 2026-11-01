@@ -1,10 +1,10 @@
 # API Compatibility Review
 
-This project tracks Rust `unicode-bidi` `0.3.18`, with .NET APIs shaped around UTF-16 strings.
+This project's algorithm tracks Rust `unicode-bidi` `0.3.18`, with .NET APIs shaped around UTF-16 strings. From package `0.4.0`, character data follows Unicode `18.0.0` directly; see [maintenance](maintenance.md) for the intentional data differences.
 
 ## Implemented Surface
 
-- `BidiClass`, `CharData`, and Unicode 16.0.0 hardcoded bidi data under the root `Unicode.Bidi` namespace.
+- `BidiClass`, `CharData`, and Unicode 18.0.0 hardcoded bidi data under the root `Unicode.Bidi` namespace.
 - `Level` creation, level arithmetic, direction helpers, and .NET-style `Value`, `IsLeftToRight`, and `IsRightToLeft` properties.
 - `Level.Create` and `Level.CreateExplicit` as idiomatic .NET aliases for `Level.New` and `Level.NewExplicit`.
 - Unicode formatting character constants.
